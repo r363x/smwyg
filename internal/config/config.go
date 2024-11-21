@@ -3,7 +3,6 @@ package config
 import (
 	"gopkg.in/yaml.v2"
 	"os"
-    "fmt"
 )
 
 type Config struct {
@@ -32,8 +31,6 @@ func Load() (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-
-    fmt.Printf("%#v\n", cfg)
 
 	return &cfg, nil
 }

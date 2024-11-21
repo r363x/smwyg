@@ -20,6 +20,10 @@ func New(dbManager db.Manager) (*tea.Program, error) {
 		query:     textinput.New(),
 		results:   "",
 	}
+    err := m.dbManager.Connect()
+    if err != nil {
+        fmt.Println(err)
+    }
 	m.query.Placeholder = "Enter your SQL query here"
 	m.query.Focus()
 
