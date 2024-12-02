@@ -5,3 +5,6 @@ database:
   user: myuser
   password: mypassword
   dbname: mydb
+logging:
+  log_file: debug.log
+  log_level: debug

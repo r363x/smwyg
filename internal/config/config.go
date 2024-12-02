@@ -1,12 +1,19 @@
 package config
 
 import (
-	"gopkg.in/yaml.v2"
 	"os"
+
+	"gopkg.in/yaml.v2"
 )
 
 type Config struct {
 	DatabaseConfig DatabaseConfig `yaml:"database"`
+    LoggingConfig  LoggingConfig `yaml:"logging"`
+}
+
+type LoggingConfig struct {
+    LogFile  string `yaml:"log_file"`
+    LogLevel string `yaml:"log_level"`
 }
 
 type DatabaseConfig struct {
