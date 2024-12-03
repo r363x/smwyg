@@ -2,13 +2,10 @@ package tui
 
 import (
 	"fmt"
-    "math"
-    "strings"
     "log"
 
 	"github.com/charmbracelet/bubbles/textinput"
     gloss "github.com/charmbracelet/lipgloss"
-    // table "github.com/charmbracelet/lipgloss/table"
     "github.com/charmbracelet/bubbles/table"
     "github.com/charmbracelet/bubbles/textarea"
 	tea "github.com/charmbracelet/bubbletea"
@@ -16,7 +13,7 @@ import (
 )
 
 var (
-    paneStyle = gloss.NewStyle().Border(gloss.NormalBorder())
+    paneStyle = gloss.NewStyle().Border(gloss.NormalBorder()).BorderForeground(gloss.Color("240"))
     // HeaderStyle = gloss.NewStyle().Align(gloss.Center, gloss.Center).Bold(true)
     // EvenRowStyle = gloss.NewStyle().Align(gloss.Left, gloss.Center).Faint(true)
     // OddRowStyle = gloss.NewStyle().Align(gloss.Left, gloss.Center)
@@ -41,38 +38,42 @@ type model struct {
     dimensions dimensions
 }
 
-func (m *model) setResults(data interface{}) {
-    m.resultView.SetRows([]table.Row{})
-    switch data.(type) {
+// func (m *model) setResults(data interface{}) {
+//     m.resultView.SetRows([]table.Row{})
+//     switch items := data.(type) {
 
-    case []map[string]interface{}:
-        items := data.([]map[string]interface{})
-        columns := make([]table.Column, 0)
+//     case []map[string]interface{}:
+//         columns := make([]table.Column, 0)
 
-        // Set headers
-        for header := range items[0] {
-            columns = append(columns, table.Column{Title: strings.ToUpper(header)})
-        }
-        m.resultView.SetColumns(columns)
+//         _headers := make([]string, 0)
 
-        // Set rows
-        rows := make([]table.Row, 0)
-        for _, item := range items {
-            row := make([]string, 0)
-            for _, val := range item {
-                switch v := val.(type) {
-                case int64:
-                    row = append(row, fmt.Sprintf("%d", v))
-                case []byte:
-                    row = append(row, string(v))
-                }
-            }
-            rows = append(rows, row)
-        }
+//         // Set headers
+//         for header := range items[0] {
+//             _headers = append(_headers, header)
+//             columns = append(columns, table.Column{Title: strings.ToUpper(header), Width: m.dimensions.width / len(items)})
+//         }
+//         m.resultView.SetColumns(columns)
 
-        m.resultView.SetRows(rows)
-    }
-}
+//         // Set rows
+//         rows := make([]table.Row, 0)
+//         for _, item := range items {
+//             row := make([]string, 0)
+//             for _, key := range _headers {
+
+//                 switch val := item[key].(type) {
+//                 case int64:
+//                     row = append(row, fmt.Sprintf("%d", val))
+//                 case []byte:
+//                     row = append(row, string(val))
+//                 }
+
+//             }
+//             rows = append(rows, row)
+//         }
+
+//         m.resultView.SetRows(rows)
+//     }
+// }
 
 
 func (m *model) refreshDbView() {
@@ -98,16 +99,18 @@ func New(dbManager db.Manager) (*tea.Program, error) {
 
     // Set table styles
     s := table.DefaultStyles()
-	s.Header = s.Header.
-		BorderStyle(gloss.NormalBorder()).
-		BorderForeground(gloss.Color("240")).
-		BorderBottom(true).
-		Bold(false)
-	s.Selected = s.Selected.
-		Foreground(gloss.Color("229")).
-		Background(gloss.Color("57")).
-		Bold(false)
-	m.resultView.SetStyles(s)
+    s.Header = s.Header.
+        BorderStyle(gloss.NormalBorder()).
+        BorderForeground(gloss.Color("240")).
+        BorderBottom(true).
+        Bold(false)
+    s.Selected = s.Selected.
+        Foreground(gloss.Color("229")).
+        Background(gloss.Color("57")).
+        Bold(false)
+    // s.Cell = s.Cell.
+    //     Align(gloss.Left)
+    m.resultView.SetStyles(s)
 
     // Connect to the database
     err := m.dbManager.Connect()
@@ -117,17 +120,18 @@ func New(dbManager db.Manager) (*tea.Program, error) {
 
     m.refreshDbView()
 	m.queryView.Placeholder = "Enter your SQL query here"
-	m.queryView.Focus()
+    m.queryView.Focus()
+	// m.resultView.Focus()
 
 	return tea.NewProgram(m), nil
 }
 
 func (m model) Init() tea.Cmd {
-	return textinput.Blink
+	return tea.Batch(textinput.Blink)
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	var cmd tea.Cmd
+    var cmd tea.Cmd
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -152,11 +156,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case tea.KeyEnter:
             if m.queryView.Value() != "" && m.queryView.Focused() {
-                results, err := m.dbManager.ExecuteQuery(m.queryView.Value())
+                err := m.dbManager.ExecuteQuery(m.queryView.Value(), &m.resultView, m.dimensions.width)
                 if err != nil {
                     log.Fatalln("Fatal: ", err)
-                } else {
-                    m.setResults(results)
                 }
             }
 
@@ -169,26 +171,36 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
         return m, nil
 	}
 
-	m.queryView, cmd = m.queryView.Update(msg)
-	return m, cmd
+    switch {
+    case m.queryView.Focused():
+        m.queryView, cmd = m.queryView.Update(msg)
+    case m.resultView.Focused():
+        m.resultView, cmd = m.resultView.Update(msg)
+    }
+
+    return m, cmd
 }
 
 func (m model) View() string {
 
     // Left side, narrow
     paneDBView := paneStyle.
-        Width(int(math.Ceil(float64(m.dimensions.width) * 0.1))).
-        Height(int(math.Ceil(float64(m.dimensions.height) * 0.95)))
+        Width(int(float64(m.dimensions.width) * 0.1)).
+        Height(int(float64(m.dimensions.height) * 0.95))
 
-    paneQueryEditor := paneStyle.
-        Width(int(math.Ceil(float64(m.dimensions.width) * 0.88))).
-        Height(int(math.Ceil(float64(m.dimensions.height) * 0.61)))
+    m.queryView.SetWidth(int(float64(m.dimensions.width) * 0.88))
+    m.queryView.SetHeight(int(float64(m.dimensions.height) * 0.6))
 
-    paneQueryResults := paneStyle.
-        Width(int(math.Ceil(float64(m.dimensions.width) * 0.88))).
-        Height(int(math.Ceil(float64(m.dimensions.height) * 0.31)))
-        
+    m.resultView.SetWidth(int(float64(m.dimensions.width) * 0.88))
+    m.resultView.SetHeight(int(float64(m.dimensions.height) * 0.3))
 
-    return gloss.JoinHorizontal(0.1, paneDBView.Render(m.dbView.content...), gloss.JoinVertical(0.1, paneQueryEditor.Render(m.queryView.View()), paneQueryResults.Render(m.resultView.View())))
+    return gloss.JoinHorizontal(
+        0.1,
+        paneDBView.Render(m.dbView.content...),
+        gloss.JoinVertical(
+            0.01,
+            m.queryView.View(),
+            m.resultView.View(),
+        ))
 
 }
