@@ -50,6 +50,7 @@ func (m *MySQLManager) ExecuteQuery(query string, table *tbl.Model, width int) e
         _columns = append(_columns, col)
         columns = append(columns, tbl.Column{Title: strings.ToUpper(col), Width: width / len(data[0])})
     }
+    table.SetRows(nil)
     table.SetColumns(columns)
 
     // Set rows
