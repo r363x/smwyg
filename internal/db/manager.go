@@ -8,6 +8,7 @@ import (
 
 type Manager interface {
 	Connect() error
+	Status() error
 	Disconnect() error
 	ExecuteQuery(query string, table *table.Model, width int) error
 	ExecuteQueryRaw(query string) ([]map[string]interface{}, error)

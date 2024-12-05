@@ -3,6 +3,7 @@ package tui
 import (
 	"fmt"
     "log"
+    "time"
 
 	"github.com/charmbracelet/bubbles/textinput"
     gloss "github.com/charmbracelet/lipgloss"
@@ -42,6 +43,25 @@ type model struct {
     dimensions dimensions
 }
 
+type statusMsg struct {
+    section int
+    message string
+}
+
+type tickMsg time.Time
+
+func doTick() tea.Cmd {
+    return tea.Tick(time.Second * 3, func(t time.Time) tea.Msg {
+        return tickMsg(t)
+    })
+}
+
+const (
+    secLeft  = iota
+    secCenter
+    secRight
+)
+
 func (m *model) refreshDbView() {
 
     tables, err := m.dbManager.GetTables(); if err != nil {
@@ -52,10 +72,19 @@ func (m *model) refreshDbView() {
     m.dbView.content = tables
 }
 
-func (m *model) refreshStatusView() {
-    m.statusView.content.left = "LEFT"
-    m.statusView.content.center = "CENTER"
-    m.statusView.content.right = "RIGHT"
+func (m *model) refreshStatusView() tea.Msg {
+    msg := "STATUS: "
+    err := m.dbManager.Status()
+    if err != nil {
+        msg += fmt.Sprintf("error: %s", err)
+    } else {
+        msg += "Connected"
+    }
+
+    return statusMsg{
+        section: secLeft,
+        message: msg,
+    }
 }
 
 func New(dbManager db.Manager) (*tea.Program, error) {
@@ -68,6 +97,12 @@ func New(dbManager db.Manager) (*tea.Program, error) {
         resultView: table.New(),
 		queryView: textarea.New(),
 	}
+
+    m.queryView.FocusedStyle.Base = m.queryView.FocusedStyle.Base.
+        BorderStyle(gloss.NormalBorder())
+    m.queryView.BlurredStyle.Base = m.queryView.BlurredStyle.Base.
+        BorderStyle(gloss.NormalBorder()).
+        BorderForeground(gloss.Color("240"))
 
     // Set table styles
     s := table.DefaultStyles()
@@ -85,20 +120,22 @@ func New(dbManager db.Manager) (*tea.Program, error) {
 
     // Connect to the database
     err := m.dbManager.Connect()
-    if err != nil {
-        fmt.Println(err)
+    if err == nil {
+        m.refreshDbView()
     }
 
-    m.refreshDbView()
 	m.queryView.Placeholder = "Enter your SQL query here"
     m.queryView.Focus()
-	// m.resultView.Focus()
 
 	return tea.NewProgram(m), nil
 }
 
 func (m model) Init() tea.Cmd {
-	return textinput.Blink
+	return tea.Batch(
+        textinput.Blink,
+        m.refreshStatusView,
+        doTick(),
+    )
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -139,8 +176,24 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
     case tea.WindowSizeMsg:
         m.dimensions.width = msg.Width
         m.dimensions.height = msg.Height
+
+        return m, nil
+
+    case tickMsg:
+        return m, tea.Batch(m.refreshStatusView, doTick())
+
+    case statusMsg:
+        switch msg.section {
+        case secLeft:
+            m.statusView.content.left = msg.message
+        case secCenter:
+            m.statusView.content.center = msg.message
+        case secRight:
+            m.statusView.content.right = msg.message
+        }
         return m, nil
 	}
+
 
     switch {
     case m.queryView.Focused():
@@ -148,6 +201,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
     case m.resultView.Focused():
         m.resultView, cmd = m.resultView.Update(msg)
     }
+    m.statusView.content.center = "CENTER"
+    m.statusView.content.right = "RIGHT"
     m.refreshStatusView()
 
     return m, cmd
@@ -159,20 +214,32 @@ func (m model) View() string {
     paneDBView := gloss.NewStyle().
         Border(gloss.NormalBorder()).
         BorderForeground(gloss.Color("240")).
-        Width(int(float64(m.dimensions.width) * 0.1)).
+        Width(int(float64(m.dimensions.width) * 0.08)).
         Height(m.dimensions.height - 3)
 
-    m.queryView.SetWidth(m.dimensions.width - paneDBView.GetWidth())
-    m.queryView.SetHeight(int(float64(m.dimensions.height) * 0.5) - 3)
+    m.queryView.SetWidth(m.dimensions.width - paneDBView.GetWidth() - 4)
+    m.queryView.SetHeight(int(float64(m.dimensions.height) * 0.5) - 10)
 
-    m.resultView.SetWidth(m.dimensions.width - paneDBView.GetWidth())
-    m.resultView.SetHeight(m.dimensions.height - m.queryView.Height() - 1)
+    newWidth := m.dimensions.width - paneDBView.GetWidth() 
+
+    // Resize the table
+    cols := m.resultView.Columns()
+    // Resize columns
+    for i := range len(cols) {
+        cols[i].Width = newWidth / len(cols)
+    }
+    m.resultView.SetColumns(cols)
+
+    m.resultView.SetWidth(newWidth)
+    m.resultView.SetHeight(m.dimensions.height - m.queryView.Height() - 3)
 
     // Bottom, narrow
     paneStatusView := gloss.NewStyle().
         Width(m.dimensions.width).
+        Padding(0).
         Height(1)
     statusItemView := gloss.NewStyle().
+        Padding(0).
         Width(paneStatusView.GetWidth() / 3)
 
     return gloss.JoinVertical(0,

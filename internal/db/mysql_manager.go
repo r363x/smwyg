@@ -19,6 +19,10 @@ func NewMySQLManager(cfg config.DatabaseConfig) (*MySQLManager, error) {
 	return &MySQLManager{cfg: cfg}, nil
 }
 
+func (m *MySQLManager) Status() error {
+    return m.db.Ping()
+}
+
 func (m *MySQLManager) Connect() error {
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", m.cfg.User, m.cfg.Password, m.cfg.Host, m.cfg.Port, m.cfg.DBName)
 	db, err := sql.Open("mysql", dsn)
