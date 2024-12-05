@@ -19,8 +19,8 @@ func NewMySQLManager(cfg config.DatabaseConfig) (*MySQLManager, error) {
 	return &MySQLManager{cfg: cfg}, nil
 }
 
-func (m *MySQLManager) Status() error {
-    return m.db.Ping()
+func (m *MySQLManager) Status() (string, error) {
+    return "MySQL", m.db.Ping()
 }
 
 func (m *MySQLManager) Connect() error {

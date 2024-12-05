@@ -72,9 +72,9 @@ func (m *model) refreshDbView() {
     m.dbView.content = tables
 }
 
-func (m *model) refreshStatusView() tea.Msg {
-    msg := "STATUS: "
-    err := m.dbManager.Status()
+func (m *model) refreshStatusLeft() tea.Msg {
+    server, err := m.dbManager.Status()
+    msg := fmt.Sprintf("SERVER: %s STATUS: ", server)
     if err != nil {
         msg += fmt.Sprintf("error: %s", err)
     } else {
@@ -84,6 +84,20 @@ func (m *model) refreshStatusView() tea.Msg {
     return statusMsg{
         section: secLeft,
         message: msg,
+    }
+}
+
+func (m *model) refreshStatusCenter() tea.Msg {
+    return statusMsg{
+        section: secCenter,
+        message: "CENTER",
+    }
+}
+
+func (m *model) refreshStatusRight() tea.Msg {
+    return statusMsg{
+        section: secRight,
+        message: "RIGHT",
     }
 }
 
@@ -133,7 +147,9 @@ func New(dbManager db.Manager) (*tea.Program, error) {
 func (m model) Init() tea.Cmd {
 	return tea.Batch(
         textinput.Blink,
-        m.refreshStatusView,
+        m.refreshStatusLeft,
+        m.refreshStatusCenter,
+        m.refreshStatusRight,
         doTick(),
     )
 }
@@ -180,7 +196,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
         return m, nil
 
     case tickMsg:
-        return m, tea.Batch(m.refreshStatusView, doTick())
+        return m, tea.Batch(
+            m.refreshStatusLeft,
+            m.refreshStatusCenter,
+            m.refreshStatusRight,
+            doTick(),
+        )
 
     case statusMsg:
         switch msg.section {
@@ -201,9 +222,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
     case m.resultView.Focused():
         m.resultView, cmd = m.resultView.Update(msg)
     }
-    m.statusView.content.center = "CENTER"
-    m.statusView.content.right = "RIGHT"
-    m.refreshStatusView()
 
     return m, cmd
 }
