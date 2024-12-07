@@ -2,7 +2,6 @@ package db
 
 import (
 	"github.com/r363x/dbmanager/internal/config"
-    "github.com/charmbracelet/bubbles/table"
     "fmt"
 )
 
@@ -12,8 +11,7 @@ type Manager interface {
     GetVersion() (string, error)
     GetDatabases() ([]string, string, error)
 	Disconnect() error
-	ExecuteQuery(query string, table *table.Model, width int) error
-	ExecuteQueryRaw(query string) ([]map[string]interface{}, error)
+	ExecuteQuery(query string) ([]map[string]interface{}, error)
 	GetTables() ([]string, error)
 	GetColumns(table string) ([]string, error)
 }

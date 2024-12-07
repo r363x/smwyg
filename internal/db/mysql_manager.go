@@ -3,10 +3,8 @@ package db
 import (
 	"database/sql"
 	"fmt"
-    "strings"
 
 	_ "github.com/go-sql-driver/mysql"
-    tbl "github.com/charmbracelet/bubbles/table"
 	"github.com/r363x/dbmanager/internal/config"
 )
 
@@ -40,46 +38,7 @@ func (m *MySQLManager) Disconnect() error {
 	return nil
 }
 
-func (m *MySQLManager) ExecuteQuery(query string, table *tbl.Model, width int) error {
-    data, err := m.ExecuteQueryRaw(query); if err != nil {
-        return err
-    }
-
-    columns := make([]tbl.Column, 0)
-
-    _columns := make([]string, 0)
-
-    // Set headers
-    for col := range data[0] {
-        _columns = append(_columns, col)
-        columns = append(columns, tbl.Column{Title: strings.ToUpper(col), Width: width / len(data[0])})
-    }
-    table.SetRows(nil)
-    table.SetColumns(columns)
-
-    // Set rows
-    rows := make([]tbl.Row, 0)
-    for _, item := range data {
-        row := make([]string, 0)
-        for _, key := range _columns {
-
-            switch val := item[key].(type) {
-            case int64:
-                row = append(row, fmt.Sprintf("%d", val))
-            case []byte:
-                row = append(row, string(val))
-            }
-
-        }
-        rows = append(rows, row)
-    }
-
-    table.SetRows(rows)
-
-    return nil
-}
-
-func (m *MySQLManager) ExecuteQueryRaw(query string) ([]map[string]interface{}, error) {
+func (m *MySQLManager) ExecuteQuery(query string) ([]map[string]interface{}, error) {
 	rows, err := m.db.Query(query)
 	if err != nil {
 		return nil, err
