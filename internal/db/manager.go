@@ -8,7 +8,9 @@ import (
 
 type Manager interface {
 	Connect() error
-	Status() (string, error)
+	Status() error
+    GetVersion() (string, error)
+    GetDatabases() ([]string, string, error)
 	Disconnect() error
 	ExecuteQuery(query string, table *table.Model, width int) error
 	ExecuteQueryRaw(query string) ([]map[string]interface{}, error)

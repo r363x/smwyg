@@ -19,8 +19,8 @@ func NewMySQLManager(cfg config.DatabaseConfig) (*MySQLManager, error) {
 	return &MySQLManager{cfg: cfg}, nil
 }
 
-func (m *MySQLManager) Status() (string, error) {
-    return "MySQL", m.db.Ping()
+func (m *MySQLManager) Status() error {
+    return m.db.Ping()
 }
 
 func (m *MySQLManager) Connect() error {
@@ -150,4 +150,37 @@ func (m *MySQLManager) GetColumns(table string) ([]string, error) {
 	}
 
 	return columns, nil
+}
+
+func (m *MySQLManager) GetVersion() (string, error) {
+	row := m.db.QueryRow("SELECT VERSION()")
+
+    var version string
+
+    if err := row.Scan(&version); err != nil {
+        return "", err
+    }
+
+	return version, nil
+}
+
+
+func (m *MySQLManager) GetDatabases() ([]string, string, error) {
+	rows, err := m.db.Query("SHOW DATABASES")
+    if err != nil {
+        return nil, "",  err
+    }
+    defer rows.Close()
+
+    var databases []string
+    for rows.Next() {
+        var database string
+        if err = rows.Scan(&database); err != nil {
+            return nil, "", err
+        }
+        databases = append(databases, database)
+    }
+
+
+	return databases, m.cfg.DBName, nil
 }

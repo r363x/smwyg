@@ -10,6 +10,7 @@ import (
     "github.com/charmbracelet/bubbles/table"
     "github.com/charmbracelet/bubbles/textarea"
 	tea "github.com/charmbracelet/bubbletea"
+    "github.com/charmbracelet/lipgloss/tree"
 	"github.com/r363x/dbmanager/internal/db"
 )
 
@@ -18,11 +19,11 @@ type dimensions struct {
     height int
 }
 
-type dbView struct {
-    content []string
-    cursor  int
-    focused bool
-}
+// type dbView struct {
+//     content []string
+//     cursor  int
+//     focused bool
+// }
 
 type statusDetails struct {
     left   string
@@ -36,7 +37,7 @@ type statusView struct {
 
 type model struct {
 	dbManager  db.Manager
-    dbView     dbView
+    dbView     *tree.Tree
     queryView  textarea.Model
     resultView table.Model
     statusView statusView
@@ -64,19 +65,41 @@ const (
 
 func (m *model) refreshDbView() {
 
-    tables, err := m.dbManager.GetTables(); if err != nil {
-        m.dbView.content[0] = fmt.Sprintf("Error: %v", err)
+    dbs, cur, err := m.dbManager.GetDatabases()
+    if err != nil {
+        m.dbView.Root("N/A")
         return
     }
 
-    m.dbView.content = tables
+    m.dbView = m.dbView.Root(".")
+
+    tables, err := m.dbManager.GetTables(); if err != nil {
+        return
+    }
+
+    for _, db := range dbs {
+        m.dbView = m.dbView.Child(db)
+        if db == cur {
+            m.dbView = m.dbView.Child(tree.New().Child(tables))
+        }
+    }
 }
 
 func (m *model) refreshStatusLeft() tea.Msg {
-    server, err := m.dbManager.Status()
-    msg := fmt.Sprintf("SERVER: %s STATUS: ", server)
+    msg := "Server: "
+
+    version, err := m.dbManager.GetVersion()
     if err != nil {
-        msg += fmt.Sprintf("error: %s", err)
+        msg += "N/A"
+    } else {
+        msg += version
+    }
+    msg += "   "
+
+    msg += "Status: "
+
+    if err := m.dbManager.Status(); err != nil {
+        msg += fmt.Sprintf("Error: %s", err)
     } else {
         msg += "Connected"
     }
@@ -104,10 +127,7 @@ func (m *model) refreshStatusRight() tea.Msg {
 func New(dbManager db.Manager) (*tea.Program, error) {
 	m := model{
 		dbManager: dbManager,
-        dbView: dbView{
-            cursor: 0,
-            focused: false,
-        },
+        dbView: tree.New(),
         resultView: table.New(),
 		queryView: textarea.New(),
 	}
@@ -163,25 +183,21 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyCtrlC, tea.KeyEsc:
 			return m, tea.Quit
 
-        case tea.KeyCtrlV:
-            m.resultView.Blur()
-            m.queryView.Blur()
-            m.dbView.focused = true
-
         case tea.KeyCtrlQ:
             m.resultView.Blur()
-            m.dbView.focused = false
             m.queryView.Focus()
 
         case tea.KeyCtrlR:
             m.queryView.Blur()
-            m.dbView.focused = false
             m.resultView.Focus()
 
         case tea.KeyF5:
             if m.queryView.Value() != "" && m.queryView.Focused() {
-                err := m.dbManager.ExecuteQuery(m.queryView.Value(), &m.resultView, m.dimensions.width)
-                if err != nil {
+                if err := m.dbManager.ExecuteQuery(
+                    m.queryView.Value(),
+                    &m.resultView,
+                    m.dimensions.width,
+                ); err != nil {
                     log.Fatalln("Fatal: ", err)
                 }
             }
@@ -262,7 +278,7 @@ func (m model) View() string {
 
     return gloss.JoinVertical(0,
         gloss.JoinHorizontal(0,
-            paneDBView.Render(m.dbView.content...),
+            paneDBView.Render(m.dbView.String()),
             gloss.JoinVertical(0,
                 m.queryView.View(),
                 m.resultView.View(),
