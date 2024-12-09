@@ -9,12 +9,26 @@ import (
 )
 
 type MySQLManager struct {
-	db  *sql.DB
-	cfg config.DatabaseConfig
+	db     *sql.DB
+	cfg    config.DatabaseConfig
 }
 
+type Column struct {
+    Name string
+    DataType string
+}
+
+type TableStructure struct {
+    Columns []Column
+}
+
+
 func NewMySQLManager(cfg config.DatabaseConfig) (*MySQLManager, error) {
-	return &MySQLManager{cfg: cfg}, nil
+    return &MySQLManager{cfg: cfg}, nil
+}
+
+func (m *MySQLManager) DbType() string {
+    return m.cfg.Type
 }
 
 func (m *MySQLManager) Status() error {
@@ -22,7 +36,13 @@ func (m *MySQLManager) Status() error {
 }
 
 func (m *MySQLManager) Connect() error {
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", m.cfg.User, m.cfg.Password, m.cfg.Host, m.cfg.Port, m.cfg.DBName)
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s",
+        m.cfg.User,
+        m.cfg.Password,
+        m.cfg.Host,
+        m.cfg.Port,
+        m.cfg.DBName,
+    )
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		return err
@@ -91,24 +111,36 @@ func (m *MySQLManager) GetTables() ([]string, error) {
 	return tables, nil
 }
 
-func (m *MySQLManager) GetColumns(table string) ([]string, error) {
-	rows, err := m.db.Query(fmt.Sprintf("SHOW COLUMNS FROM %s", table))
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
+func (m *MySQLManager) GetTableStructure(tableName string, database string) (*TableStructure, error) {
+    rows, err := m.db.Query(
+        fmt.Sprintf(`
+            SELECT COLUMN_NAME, DATA_TYPE FROM information_schema.columns
+            WHERE TABLE_SCHEMA = '%s' AND
+            TABLE_NAME = '%s'`,
+        database, tableName))
+    if err != nil {
+        return &TableStructure{}, err
+    }
 
-	var columns []string
-	for rows.Next() {
-		var column string
-		var rest interface{}
-		if err := rows.Scan(&column, &rest, &rest, &rest, &rest, &rest); err != nil {
-			return nil, err
-		}
-		columns = append(columns, column)
-	}
+    defer rows.Close()
 
-	return columns, nil
+    var structure TableStructure
+
+    for rows.Next() {
+        var columnName string
+        var dataType string
+
+        if err := rows.Scan(&columnName, &dataType); err != nil {
+            return &structure, err
+        }
+
+        structure.Columns = append(structure.Columns, Column{
+            Name:  columnName,
+            DataType: dataType,
+        })
+    }
+
+    return &structure, nil
 }
 
 func (m *MySQLManager) GetVersion() (string, error) {
