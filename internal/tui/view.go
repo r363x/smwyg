@@ -10,7 +10,7 @@ func (m model) View() string {
     paneDBView := gloss.NewStyle().
         Border(gloss.NormalBorder()).
         BorderForeground(gloss.Color("240")).
-        Width(int(float64(m.dimensions.width) * 0.1)).
+        Width(int(float64(m.dimensions.width) * 0.13)).
         Height(m.dimensions.height - 3)
 
     m.queryView.SetWidth(m.dimensions.width - paneDBView.GetWidth() - 4)

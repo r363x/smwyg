@@ -35,6 +35,8 @@ func (m *model) buildResultsTable(query string) error {
                 row = append(row, fmt.Sprintf("%d", val))
             case []byte:
                 row = append(row, string(val))
+            case string:
+                row = append(row, val)
             }
 
         }

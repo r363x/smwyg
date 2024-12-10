@@ -24,8 +24,8 @@ func NewManager(cfg config.DatabaseConfig) (Manager, error) {
 	switch strings.ToLower(cfg.Type) {
 	case "mysql","mariadb":
 		return NewMySQLManager(cfg)
-	// case "postgres":
-	//     return NewPostgresManager(cfg)
+    case "postgresql":
+        return NewPostgreSQLManager(cfg)
 	// Add more database types
 	default:
 		return nil, fmt.Errorf("unsupported database type: %s", cfg.Type)

@@ -22,6 +22,14 @@ func (m *PostgreSQLManager) DbType() string {
     return m.cfg.Type
 }
 
+func (m *PostgreSQLManager) DbAddr() string {
+    return m.cfg.Host
+}
+
+func (m *PostgreSQLManager) DbUser() string {
+    return m.cfg.User
+}
+
 func (m *PostgreSQLManager) Status() error {
     if err := m.db.Ping(); err != nil {
         return fmt.Errorf("failed to ping PostgreSQL database: %v", err)
@@ -65,40 +73,38 @@ func (m *PostgreSQLManager) ExecuteQuery(query string) ([]map[string]interface{}
     if err != nil {
         return nil, fmt.Errorf("failed to execute query against PostgreSQL: %v", err)
     }
-    defer func() { _ = rows.Close() }()
+    defer rows.Close()
 
     columns, err := rows.Columns()
     if err != nil {
         return nil, fmt.Errorf("failed to get column names from result set for PostgreSQL query execution: %v", err)
     }
 
-    var result []map[string]interface{}
-    valuePointers := make([]interface{}, len(columns))
-    for i := range columns {
-        // Use a generic interface{} as the type of each pointer, so that sql.Scan can handle any data type.
-        valuePointers[i] = new(interface{})
-    }
+	var result []map[string]interface{}
+	for rows.Next() {
+		row := make(map[string]interface{})
+		values := make([]interface{}, len(columns))
+		valuePointers := make([]interface{}, len(columns))
+		for i := range columns {
+			valuePointers[i] = &values[i]
+		}
 
-    for rows.Next() {
-        row := make(map[string]interface{})
-        err = rows.Scan(valuePointers...)
-        if err != nil {
-            return nil, fmt.Errorf("failed to scan result set for PostgreSQL query execution: %v", err)
-        }
+		if err := rows.Scan(valuePointers...); err != nil {
+			return nil, err
+		}
 
-        // Populate map with actual values from value pointers and column names.
-        for i, col := range columns {
-            row[col] = *(valuePointers[i].(*interface{}))
-        }
-        result = append(result, row)
-    }
+		for i, col := range columns {
+			row[col] = values[i]
+		}
+		result = append(result, row)
+	}
 
     return result, nil
 }
 
 // GetTables returns a list of tables available in the current PostgreSQL database.
 func (m *PostgreSQLManager) GetTables() ([]string, error) {
-    rows, err := m.db.Query("SELECT table_name FROM information_schema.tables WHERE table_type='BASE TABLE'")
+    rows, err := m.db.Query("SELECT tablename FROM pg_tables t WHERE t.tableowner = current_user")
     if err != nil {
         return nil, fmt.Errorf("failed to query for tables in PostgreSQL: %v", err)
     }
@@ -121,8 +127,8 @@ func (m *PostgreSQLManager) GetTableStructure(tableName string, databaseName str
     rows, err := m.db.Query(
         fmt.Sprintf(`
             SELECT column_name, data_type FROM information_schema.columns
-            WHERE table_catalog = '%s' AND table_name = '%s'
-        `, "public", tableName),
+            WHERE table_schema = 'public' AND table_name = '%s'
+        `, tableName),
     )
     if err != nil {
         return &TableStructure{}, fmt.Errorf("failed to fetch table structure for PostgreSQL: %v", err)
@@ -137,6 +143,13 @@ func (m *PostgreSQLManager) GetTableStructure(tableName string, databaseName str
         // Scan each row.
         if err := rows.Scan(&columnName, &dataType); err != nil {
             return &TableStructure{}, fmt.Errorf("failed to scan result set while fetching PostgreSQL table: %v", err)
+        }
+
+        switch dataType {
+        case "integer":
+            dataType = "int"
+        case "character varying":
+            dataType = "varchar"
         }
 
         structure.Columns = append(structure.Columns, Column{
@@ -156,3 +169,22 @@ func (m *PostgreSQLManager) GetVersion() (string, error) {
     return ver, nil
 }
 
+func (m *PostgreSQLManager) GetDatabases() ([]string, string, error) {
+	rows, err := m.db.Query("SELECT datname FROM pg_database")
+    if err != nil {
+        return nil, "",  err
+    }
+    defer rows.Close()
+
+    var databases []string
+    for rows.Next() {
+        var database string
+        if err = rows.Scan(&database); err != nil {
+            return nil, "", err
+        }
+        databases = append(databases, database)
+    }
+
+
+	return databases, m.cfg.DBName, nil
+}
