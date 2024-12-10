@@ -61,9 +61,10 @@ func (m *model) refreshStatusCenter() tea.Msg {
 }
 
 func (m *model) refreshStatusRight() tea.Msg {
+    msg := "User: " + m.dbManager.DbUser()
     return statusMsg{
         section: secRight,
-        message: "RIGHT",
+        message: msg,
     }
 }
 
