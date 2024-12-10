@@ -4,7 +4,13 @@ import (
     "fmt"
     "log"
 
+    gloss "github.com/charmbracelet/lipgloss"
     "github.com/charmbracelet/lipgloss/tree"
+)
+
+var (
+    styleServer = gloss.NewStyle().Bold(true)
+    styleCurDB = gloss.NewStyle().Bold(true)
 )
 
 
@@ -16,8 +22,9 @@ func (m *model) refreshDbView() {
         return
     }
 
-    m.dbView = tree.Root(m.dbManager.DbType()).
-        Enumerator(tree.RoundedEnumerator)
+    m.dbView = tree.Root(styleServer.Render(
+        fmt.Sprintf("  %s (%s)", m.dbManager.DbType(), m.dbManager.DbAddr()))).
+            Enumerator(tree.RoundedEnumerator)
 
     tables, err := m.dbManager.GetTables(); if err != nil {
         return
@@ -27,7 +34,7 @@ func (m *model) refreshDbView() {
         if db == cur {
 
             // Database
-            dbRoot := tree.Root(db)
+            dbRoot := tree.Root(styleCurDB.Render("* " + db + "  ←"))
             var tableRoot *tree.Tree
 
             for _, table := range tables {
@@ -40,8 +47,14 @@ func (m *model) refreshDbView() {
                     log.Printf("Error: %s", err)
                     return
                 }
+                longestCol := 0
                 for _, col := range ts.Columns {
-                    tableRoot.Child(fmt.Sprintf("%-8s (%s)", col.Name, col.DataType))
+                    if len(col.Name) > longestCol {
+                        longestCol = len(col.Name)
+                    }
+                }
+                for _, col := range ts.Columns {
+                    tableRoot.Child(fmt.Sprintf("%-*s (%s)", longestCol + 1, col.Name, col.DataType))
                 }
                 dbRoot.Child(tableRoot)
             }

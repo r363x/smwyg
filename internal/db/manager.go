@@ -9,6 +9,8 @@ import (
 type Manager interface {
 	Connect() error
 	DbType() string
+    DbAddr() string
+    DbUser() string
 	Status() error
     GetVersion() (string, error)
     GetDatabases() ([]string, string, error)

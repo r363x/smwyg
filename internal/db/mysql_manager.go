@@ -31,6 +31,15 @@ func (m *MySQLManager) DbType() string {
     return m.cfg.Type
 }
 
+func (m *MySQLManager) DbAddr() string {
+    return m.cfg.Host
+}
+
+func (m *MySQLManager) DbUser() string {
+    return m.cfg.User
+}
+
+
 func (m *MySQLManager) Status() error {
     return m.db.Ping()
 }
