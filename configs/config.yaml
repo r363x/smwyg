@@ -1,17 +1,17 @@
-# database:
-#   type: MariaDB
-#   host: localhost
-#   port: 3306
-#   user: myuser
-#   password: mypassword
-#   dbname: mydb
 database:
-  type: PostgreSQL
+  type: MariaDB
   host: localhost
-  port: 5432
-  user: user01
-  password: password01
-  dbname: database01
+  port: 3306
+  user: myuser
+  password: mypassword
+  dbname: mydb
+# database:
+#   type: PostgreSQL
+#   host: localhost
+#   port: 5432
+#   user: user01
+#   password: password01
+#   dbname: database01
 logging:
   log_file: debug.log
   log_level: debug
