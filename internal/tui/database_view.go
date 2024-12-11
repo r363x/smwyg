@@ -14,19 +14,19 @@ var (
 )
 
 
-func (m *model) refreshDbView() {
+func (t *tab) refreshDbView() {
 
-    dbs, cur, err := m.dbManager.GetDatabases()
+    dbs, cur, err := t.dbManager.GetDatabases()
     if err != nil {
-        m.dbView.Root("N/A")
+        t.dbView.Root("N/A")
         return
     }
 
-    m.dbView = tree.Root(styleServer.Render(
-        fmt.Sprintf("  %s (%s)", m.dbManager.DbType(), m.dbManager.DbAddr()))).
+    t.dbView = tree.Root(styleServer.Render(
+        fmt.Sprintf("  %s (%s)", t.dbManager.DbType(), t.dbManager.DbAddr()))).
             Enumerator(tree.RoundedEnumerator)
 
-    tables, err := m.dbManager.GetTables(); if err != nil {
+    tables, err := t.dbManager.GetTables(); if err != nil {
         return
     }
 
@@ -42,7 +42,7 @@ func (m *model) refreshDbView() {
                 // Table
                 tableRoot = tree.Root(table)
 
-                ts, err := m.dbManager.GetTableStructure(table, db)
+                ts, err := t.dbManager.GetTableStructure(table, db)
                 if err != nil {
                     log.Printf("Error: %s", err)
                     return
@@ -58,12 +58,12 @@ func (m *model) refreshDbView() {
                 }
                 dbRoot.Child(tableRoot)
             }
-            m.dbView.Child(dbRoot)
+            t.dbView.Child(dbRoot)
             continue
         }
 
         // Database
-        m.dbView = m.dbView.Child(db)
+        t.dbView = t.dbView.Child(db)
     }
 }
 

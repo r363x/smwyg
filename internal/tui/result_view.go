@@ -7,8 +7,8 @@ import (
     "github.com/charmbracelet/bubbles/table"
 )
 
-func (m *model) buildResultsTable(query string) error {
-    data, err := m.dbManager.ExecuteQuery(query); if err != nil {
+func (t *tab) buildResultsTable(query string) error {
+    data, err := t.dbManager.ExecuteQuery(query); if err != nil {
         return err
     }
 
@@ -19,10 +19,10 @@ func (m *model) buildResultsTable(query string) error {
     // Set headers
     for col := range data[0] {
         _columns = append(_columns, col)
-        columns = append(columns, table.Column{Title: strings.ToUpper(col), Width: m.resultView.Width() / len(data[0])})
+        columns = append(columns, table.Column{Title: strings.ToUpper(col), Width: t.resultView.Width() / len(data[0])})
     }
-    m.resultView.SetRows(nil)
-    m.resultView.SetColumns(columns)
+    t.resultView.SetRows(nil)
+    t.resultView.SetColumns(columns)
 
     // Set rows
     rows := make([]table.Row, 0)
@@ -43,7 +43,7 @@ func (m *model) buildResultsTable(query string) error {
         rows = append(rows, row)
     }
 
-    m.resultView.SetRows(rows)
+    t.resultView.SetRows(rows)
 
     return nil
 }

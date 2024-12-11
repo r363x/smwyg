@@ -7,30 +7,16 @@ import (
 )
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-    var cmd tea.Cmd
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyCtrlC, tea.KeyEsc:
 			return m, tea.Quit
-
-        case tea.KeyCtrlQ:
-            m.resultView.Blur()
-            m.queryView.Focus()
-
-        case tea.KeyCtrlR:
-            m.queryView.Blur()
-            m.resultView.Focus()
-
-        case tea.KeyF5:
-            if m.queryView.Value() != "" && m.queryView.Focused() {
-                if err := m.buildResultsTable(m.queryView.Value()); err != nil {
-                    log.Fatalln("Fatal: ", err)
-                }
-            }
-            m.refreshDbView()
-            return m, nil
+        case tea.KeyCtrlO:
+            m.overlay.focused = !m.overlay.focused
+        default:
+            return m, m.tabs[m.cur].update(msg)
         }
 
     case tea.WindowSizeMsg:
@@ -41,31 +27,60 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
     case tickMsg:
         return m, tea.Batch(
-            m.refreshStatusLeft,
-            m.refreshStatusCenter,
-            m.refreshStatusRight,
+            m.tabs[m.cur].refreshStatusLeft,
+            m.tabs[m.cur].refreshStatusCenter,
+            m.tabs[m.cur].refreshStatusRight,
             doTick(),
         )
 
     case statusMsg:
-        switch msg.section {
-        case secLeft:
-            m.statusView.content.left = msg.message
-        case secCenter:
-            m.statusView.content.center = msg.message
-        case secRight:
-            m.statusView.content.right = msg.message
-        }
+        m.tabs[m.cur].updateStatus(msg)
         return m, nil
 	}
 
+    return m, nil
+}
 
-    switch {
-    case m.queryView.Focused():
-        m.queryView, cmd = m.queryView.Update(msg)
-    case m.resultView.Focused():
-        m.resultView, cmd = m.resultView.Update(msg)
+func (t *tab) updateStatus(msg statusMsg) {
+    switch msg.section {
+    case secLeft:
+        t.statusView.content.left = msg.message
+    case secCenter:
+        t.statusView.content.center = msg.message
+    case secRight:
+        t.statusView.content.right = msg.message
+    }
+}
+
+func (t *tab) update(msg tea.KeyMsg) tea.Cmd {
+    var cmd tea.Cmd
+
+    switch msg.Type {
+
+    case tea.KeyCtrlQ:
+        t.resultView.Blur()
+        t.queryView.Focus()
+
+    case tea.KeyCtrlR:
+        t.queryView.Blur()
+        t.resultView.Focus()
+
+    case tea.KeyF5:
+        if t.queryView.Value() != "" && t.queryView.Focused() {
+            if err := t.buildResultsTable(t.queryView.Value()); err != nil {
+                log.Fatalln("Fatal: ", err)
+            }
+        }
+        t.refreshDbView()
+        return nil
     }
 
-    return m, cmd
+    switch {
+    case t.queryView.Focused():
+        t.queryView, cmd = t.queryView.Update(msg)
+    case t.resultView.Focused():
+        t.resultView, cmd = t.resultView.Update(msg)
+    }
+
+    return cmd
 }

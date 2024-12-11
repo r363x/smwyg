@@ -17,12 +17,23 @@ type dimensions struct {
     height int
 }
 
-type model struct {
+type tab struct {
 	dbManager  db.Manager
     dbView     *tree.Tree
     queryView  textarea.Model
     resultView table.Model
     statusView statusView
+}
+
+type overlayMenu struct {
+    content string
+    focused bool
+}
+
+type model struct {
+    tabs []tab
+    cur int
+    overlay overlayMenu
     dimensions dimensions
 }
 
@@ -35,16 +46,17 @@ func doTick() tea.Cmd {
 }
 
 func New(dbManager db.Manager) (*tea.Program, error) {
-	m := model{
-		dbManager: dbManager,
+    var m model
+	tab := tab {
+        dbManager: dbManager,
         dbView: tree.New(),
         resultView: table.New(),
-		queryView: textarea.New(),
-	}
+        queryView: textarea.New(),
+    }
 
-    m.queryView.FocusedStyle.Base = m.queryView.FocusedStyle.Base.
+    tab.queryView.FocusedStyle.Base = tab.queryView.FocusedStyle.Base.
         BorderStyle(gloss.NormalBorder())
-    m.queryView.BlurredStyle.Base = m.queryView.BlurredStyle.Base.
+    tab.queryView.BlurredStyle.Base = tab.queryView.BlurredStyle.Base.
         BorderStyle(gloss.NormalBorder()).
         BorderForeground(gloss.Color("240"))
 
@@ -60,16 +72,21 @@ func New(dbManager db.Manager) (*tea.Program, error) {
         Foreground(gloss.Color("229")).
         Background(gloss.Color("57")).
         Bold(true)
-    m.resultView.SetStyles(s)
+    tab.resultView.SetStyles(s)
 
     // Connect to the database
-    err := m.dbManager.Connect()
+    err := tab.dbManager.Connect()
     if err == nil {
-        m.refreshDbView()
+        tab.refreshDbView()
     }
 
-	m.queryView.Placeholder = "Enter your SQL query here"
-    m.queryView.Focus()
+	tab.queryView.Placeholder = "Enter your SQL query here"
+    tab.queryView.Focus()
+
+    m.tabs = append(m.tabs, tab)
+    m.cur = 0
+    m.overlay.content = "Hello there" 
+    m.overlay.focused = false
 
 	return tea.NewProgram(m), nil
 }
@@ -77,9 +94,9 @@ func New(dbManager db.Manager) (*tea.Program, error) {
 func (m model) Init() tea.Cmd {
 	return tea.Batch(
         textinput.Blink,
-        m.refreshStatusLeft,
-        m.refreshStatusCenter,
-        m.refreshStatusRight,
+        m.tabs[m.cur].refreshStatusLeft,
+        m.tabs[m.cur].refreshStatusCenter,
+        m.tabs[m.cur].refreshStatusRight,
         doTick(),
     )
 }

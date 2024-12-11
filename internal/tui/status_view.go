@@ -28,10 +28,10 @@ const (
 )
 
 
-func (m *model) refreshStatusLeft() tea.Msg {
+func (t *tab) refreshStatusLeft() tea.Msg {
     msg := "Server: "
 
-    version, err := m.dbManager.GetVersion()
+    version, err := t.dbManager.GetVersion()
     if err != nil {
         msg += "N/A"
     } else {
@@ -41,7 +41,7 @@ func (m *model) refreshStatusLeft() tea.Msg {
 
     msg += "Status: "
 
-    if err := m.dbManager.Status(); err != nil {
+    if err := t.dbManager.Status(); err != nil {
         msg += fmt.Sprintf("Error: %s", err)
     } else {
         msg += "Connected"
@@ -53,15 +53,15 @@ func (m *model) refreshStatusLeft() tea.Msg {
     }
 }
 
-func (m *model) refreshStatusCenter() tea.Msg {
+func (t *tab) refreshStatusCenter() tea.Msg {
     return statusMsg{
         section: secCenter,
         message: "CENTER",
     }
 }
 
-func (m *model) refreshStatusRight() tea.Msg {
-    msg := "User: " + m.dbManager.DbUser()
+func (t *tab) refreshStatusRight() tea.Msg {
+    msg := "User: " + t.dbManager.DbUser()
     return statusMsg{
         section: secRight,
         message: msg,
