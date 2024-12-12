@@ -3,7 +3,7 @@ package tui
 import (
     "time"
 
-	"github.com/charmbracelet/bubbles/textinput"
+	"github.com/r363x/dbmanager/internal/tui/overlay"
     gloss "github.com/charmbracelet/lipgloss"
     "github.com/charmbracelet/bubbles/table"
     "github.com/charmbracelet/bubbles/textarea"
@@ -25,15 +25,10 @@ type tab struct {
     statusView statusView
 }
 
-type overlayMenu struct {
-    content string
-    focused bool
-}
-
 type model struct {
     tabs []tab
     cur int
-    overlay overlayMenu
+    overlay overlay.SimpleTextOverlay
     dimensions dimensions
 }
 
@@ -85,15 +80,17 @@ func New(dbManager db.Manager) (*tea.Program, error) {
 
     m.tabs = append(m.tabs, tab)
     m.cur = 0
-    m.overlay.content = "Hello there" 
-    m.overlay.focused = false
+    m.overlay = overlay.New()
+    // m.overlay.SetWidth(50)
+    // m.overlay.SetHeight(30)
+    m.overlay.SetContents("Hello there!")
 
 	return tea.NewProgram(m), nil
 }
 
 func (m model) Init() tea.Cmd {
 	return tea.Batch(
-        textinput.Blink,
+        textarea.Blink,
         m.tabs[m.cur].refreshStatusLeft,
         m.tabs[m.cur].refreshStatusCenter,
         m.tabs[m.cur].refreshStatusRight,

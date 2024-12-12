@@ -1,10 +1,7 @@
 package tui
 
 import (
-    "strings"
-
     gloss "github.com/charmbracelet/lipgloss"
-    "github.com/charmbracelet/x/ansi"
 )
 
 
@@ -12,8 +9,9 @@ func (m model) View() string {
 
     tabView := m.tabs[m.cur].populate(m.dimensions)
 
-	if m.overlay.focused {
-        return m.overlayView(tabView)
+	if m.overlay.Show {
+        m.overlay.SetBackground(tabView)
+        return m.overlay.View()
 	}
 
     return tabView
@@ -69,22 +67,3 @@ func (t *tab) populate(dim dimensions) string {
 
 }
 
-func truncateLeft(line string, padding int) string {
-	if strings.Contains(line, "\n") {
-		panic("line must not contain newline")
-	}
-
-	// NOTE: line has no newline, so [strings.Join] after [strings.Split] is safe.
-	wrapped := strings.Split(ansi.Hardwrap(line, padding, true), "\n")
-	if len(wrapped) == 1 {
-		return ""
-	}
-
-	var ansiStyle string
-	ansiStyles := ansiStyleRegexp.FindAllString(wrapped[0], -1)
-	if l := len(ansiStyles); l > 0 {
-		ansiStyle = ansiStyles[l-1]
-	}
-
-	return ansiStyle + strings.Join(wrapped[1:], "")
-}

@@ -14,14 +14,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyCtrlC, tea.KeyEsc:
 			return m, tea.Quit
         case tea.KeyCtrlO:
-            m.overlay.focused = !m.overlay.focused
+            m.overlay.Show = !m.overlay.Show
         default:
             return m, m.tabs[m.cur].update(msg)
         }
 
     case tea.WindowSizeMsg:
-        m.dimensions.width = msg.Width
-        m.dimensions.height = msg.Height
+        m.SetDimensions(msg.Width, msg.Height)
 
         return m, nil
 
@@ -39,6 +38,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
     return m, nil
+}
+
+func (m *model) SetDimensions(width int, height int) {
+    m.dimensions.width = width
+    m.dimensions.height = height
+    m.overlay.SetDimensions(width, height)
+
 }
 
 func (t *tab) updateStatus(msg statusMsg) {
