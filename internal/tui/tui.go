@@ -3,7 +3,7 @@ package tui
 import (
     "time"
 
-	"github.com/r363x/dbmanager/internal/tui/overlay"
+	"github.com/r363x/dbmanager/internal/tui/overlay/config"
     gloss "github.com/charmbracelet/lipgloss"
     "github.com/charmbracelet/bubbles/table"
     "github.com/charmbracelet/bubbles/textarea"
@@ -28,7 +28,7 @@ type tab struct {
 type model struct {
     tabs []tab
     cur int
-    overlay overlay.SimpleTextOverlay
+    overlay config.Model
     dimensions dimensions
 }
 
@@ -80,10 +80,9 @@ func New(dbManager db.Manager) (*tea.Program, error) {
 
     m.tabs = append(m.tabs, tab)
     m.cur = 0
-    m.overlay = overlay.New()
+    m.overlay = createConfigView()
     // m.overlay.SetWidth(50)
     // m.overlay.SetHeight(30)
-    m.overlay.SetContents("Hello there!")
 
 	return tea.NewProgram(m), nil
 }
