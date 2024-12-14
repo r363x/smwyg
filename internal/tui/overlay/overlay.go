@@ -106,7 +106,7 @@ func (m *ModelBase) SetBackground(content string) {
     m.bg = content
 }
 
-func (m ModelBase) View() string {
+func (m ModelBase) BaseView() string {
 
     row := (m.dimensions.height - m.height) / 2
     col := (m.dimensions.width - m.width) / 2

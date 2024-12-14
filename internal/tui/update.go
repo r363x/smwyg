@@ -3,10 +3,13 @@ package tui
 import (
     "log"
 
+	"github.com/r363x/dbmanager/internal/tui/overlay/config"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+
+    var cmd tea.Cmd
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -35,13 +38,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
     case statusMsg:
         m.tabs[m.cur].updateStatus(msg)
         return m, nil
+
+    case config.ButtonMsg:
+        m.overlay, cmd = m.overlay.Update(msg)
+
 	}
 
-    if m.overlay.Show {
-        m.overlay.Update(msg)
-    }
 
-    return m, nil
+    return m, cmd
 }
 
 func (m *model) SetDimensions(width int, height int) {

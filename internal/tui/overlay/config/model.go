@@ -10,21 +10,19 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 )
 
-type ButtonMsg interface{}
+type ButtonMsg Msg
 
-type ButtonPressMsg struct {
-    button *Button
-}
+type MsgType int
 
-type ButtonReleaseMsg struct {
-    button *Button
-}
+const (
+    ButtonPress MsgType = iota
+    ButtonRelease
+    ButtonSelect
+    ButtonUnselect
+)
 
-type ButtonSelectMsg struct {
-    button *Button
-}
-
-type ButtonUnselectMsg struct {
+type Msg struct {
+    Type MsgType
     button *Button
 }
 
@@ -38,11 +36,31 @@ type Button struct {
 }
 
 func (b *Button) ButtonPressed() tea.Msg {
-    return ButtonMsg(ButtonPressMsg{button: b})
+    return ButtonMsg{
+        Type: ButtonPress,
+        button: b,
+    }
 }
 
 func (b *Button) ButtonReleased() tea.Msg {
-    return ButtonMsg(ButtonReleaseMsg{button: b})
+    return ButtonMsg{
+        Type: ButtonRelease,
+        button: b,
+    }
+}
+
+func (b *Button) ButtonSelected() tea.Msg {
+    return ButtonMsg{
+        Type: ButtonSelect,
+        button: b,
+    }
+}
+
+func (b *Button) ButtonUnselected() tea.Msg {
+    return ButtonMsg{
+        Type: ButtonUnselect,
+        button: b,
+    }
 }
 
 func (b *Button) View() string {
@@ -95,26 +113,40 @@ func New(views []View) Model {
     return Model{ base, views, 0 }
 }
 
-func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
     var cmd tea.Cmd
 
     switch msg := msg.(type) {
-    case ButtonPressMsg:
-        msg.button.style = msg.button.stylePressed
-        cmd = msg.button.ButtonReleased
-    case ButtonReleaseMsg:
-        msg.button.action()
-        time.Sleep(time.Millisecond * 100)
-        msg.button.style = msg.button.styleSelected
-    case ButtonSelectMsg:
-        msg.button.style = msg.button.styleSelected
-    case ButtonUnselectMsg:
-        msg.button.style = msg.button.styleUnselected
+    case ButtonMsg:
+        switch msg.Type {
+
+        case ButtonPress:
+            msg.button.style = msg.button.stylePressed
+            cmd = msg.button.ButtonReleased
+
+        case ButtonRelease:
+            msg.button.action()
+            time.Sleep(time.Millisecond * 100)
+            msg.button.style = msg.button.styleSelected
+
+        case ButtonSelect:
+            msg.button.style = msg.button.styleSelected
+
+        case ButtonUnselect:
+            msg.button.style = msg.button.styleUnselected
+
+        }
     }
 
-    m.SetContents(m.View())
+    // m.SetContents(m.View())
 
     return m, cmd
+}
+
+func (m Model) View() string {
+
+    m.SetContents(m.views[m.cur].Content)
+    return m.BaseView()
 }
 
 func (m Model) Init() tea.Cmd {
