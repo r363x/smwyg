@@ -1,16 +1,12 @@
 package db
 
 import (
-	"database/sql"
 	"fmt"
-
-	_ "github.com/go-sql-driver/mysql"
 	"github.com/r363x/dbmanager/internal/config"
 )
 
 type MySQLManager struct {
-	db     *sql.DB
-	cfg    config.DatabaseConfig
+    BaseDBManager
 }
 
 type Column struct {
@@ -24,24 +20,7 @@ type TableStructure struct {
 
 
 func NewMySQLManager(cfg config.DatabaseConfig) (*MySQLManager, error) {
-    return &MySQLManager{cfg: cfg}, nil
-}
-
-func (m *MySQLManager) DbType() string {
-    return m.cfg.Type
-}
-
-func (m *MySQLManager) DbAddr() string {
-    return m.cfg.Host
-}
-
-func (m *MySQLManager) DbUser() string {
-    return m.cfg.User
-}
-
-
-func (m *MySQLManager) Status() error {
-    return m.db.Ping()
+    return &MySQLManager{BaseDBManager{cfg: cfg}}, nil
 }
 
 func (m *MySQLManager) Connect() error {
@@ -52,19 +31,7 @@ func (m *MySQLManager) Connect() error {
         m.cfg.Port,
         m.cfg.DBName,
     )
-	db, err := sql.Open("mysql", dsn)
-	if err != nil {
-		return err
-	}
-	m.db = db
-	return db.Ping()
-}
-
-func (m *MySQLManager) Disconnect() error {
-	if m.db != nil {
-		return m.db.Close()
-	}
-	return nil
+    return m.BaseDBManager.Connect(dsn)
 }
 
 func (m *MySQLManager) ExecuteQuery(query string) ([]map[string]interface{}, error) {

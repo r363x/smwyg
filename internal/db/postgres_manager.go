@@ -1,40 +1,19 @@
 package db
 
 import (
-    "database/sql"
-	_ "github.com/lib/pq"
-	"github.com/r363x/dbmanager/internal/config"
     "fmt"
+	"github.com/r363x/dbmanager/internal/config"
+
 )
 
 // PostgreSQLManager represents a manager for interacting with PostgreSQL databases.
 type PostgreSQLManager struct {
-    db     *sql.DB
-    cfg    config.DatabaseConfig
+    BaseDBManager
 }
 
 func NewPostgreSQLManager(cfg config.DatabaseConfig) (*PostgreSQLManager,
 error) {
-    return &PostgreSQLManager{cfg: cfg}, nil
-}
-
-func (m *PostgreSQLManager) DbType() string {
-    return m.cfg.Type
-}
-
-func (m *PostgreSQLManager) DbAddr() string {
-    return m.cfg.Host
-}
-
-func (m *PostgreSQLManager) DbUser() string {
-    return m.cfg.User
-}
-
-func (m *PostgreSQLManager) Status() error {
-    if err := m.db.Ping(); err != nil {
-        return fmt.Errorf("failed to ping PostgreSQL database: %v", err)
-    }
-    return nil
+    return &PostgreSQLManager{BaseDBManager{cfg: cfg}}, nil
 }
 
 // Connect establishes a connection to the PostgreSQL database.
@@ -43,28 +22,7 @@ func (m *PostgreSQLManager) Connect() error {
         "host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
         m.cfg.Host, m.cfg.Port, m.cfg.User, m.cfg.Password, m.cfg.DBName,
     )
-    var err error
-    m.db, err = sql.Open("postgres", dsn)
-    if err != nil {
-        return fmt.Errorf("failed to connect to PostgreSQL database: %v", err)
-    }
-    // Check the connection by pinging it.
-    if err := m.Status(); err != nil {
-        m.Disconnect()
-        return err
-    }
-    return nil
-}
-
-// Disconnect closes the current PostgreSQL database connection.
-func (m *PostgreSQLManager) Disconnect() error {
-    if m.db == nil {
-        return nil // Already disconnected or never connected.
-    }
-    var err error
-    err = m.db.Close()
-    m.db = nil
-    return err
+    return m.BaseDBManager.Connect(dsn)
 }
 
 // ExecuteQuery executes a SQL query against the PostgreSQL database and returns its results as maps of string to interface{} values.
