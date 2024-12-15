@@ -5,18 +5,6 @@ import (
 )
 
 
-func (m model) View() string {
-
-    tabView := m.tabs[m.cur].populate(m.dimensions)
-
-	if m.overlay.Show {
-        m.overlay.SetBackground(tabView)
-        return m.overlay.View()
-	}
-
-    return tabView
-}
-
 func (t *tab) populate(dim dimensions) string {
 
     // Left side, narrow

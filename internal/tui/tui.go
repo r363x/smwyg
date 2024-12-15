@@ -3,7 +3,6 @@ package tui
 import (
     "time"
 
-	"github.com/r363x/dbmanager/internal/tui/overlay/config"
     gloss "github.com/charmbracelet/lipgloss"
     "github.com/charmbracelet/bubbles/table"
     "github.com/charmbracelet/bubbles/textarea"
@@ -23,13 +22,6 @@ type tab struct {
     queryView  textarea.Model
     resultView table.Model
     statusView statusView
-}
-
-type model struct {
-    tabs []tab
-    cur int
-    overlay config.Model
-    dimensions dimensions
 }
 
 type tickMsg time.Time
@@ -87,13 +79,4 @@ func New(dbManager db.Manager) (*tea.Program, error) {
 	return tea.NewProgram(m), nil
 }
 
-func (m model) Init() tea.Cmd {
-	return tea.Batch(
-        textarea.Blink,
-        m.tabs[m.cur].refreshStatusLeft,
-        m.tabs[m.cur].refreshStatusCenter,
-        m.tabs[m.cur].refreshStatusRight,
-        doTick(),
-    )
-}
 

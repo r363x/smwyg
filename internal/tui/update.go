@@ -3,50 +3,9 @@ package tui
 import (
     "log"
 
-	"github.com/r363x/dbmanager/internal/tui/overlay/config"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-
-    var cmd tea.Cmd
-
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch msg.Type {
-		case tea.KeyCtrlC, tea.KeyEsc:
-			return m, tea.Quit
-        case tea.KeyCtrlO:
-            m.overlay.Show = !m.overlay.Show
-        default:
-            return m, m.tabs[m.cur].update(msg)
-        }
-
-    case tea.WindowSizeMsg:
-        m.SetDimensions(msg.Width, msg.Height)
-
-        return m, nil
-
-    case tickMsg:
-        return m, tea.Batch(
-            m.tabs[m.cur].refreshStatusLeft,
-            m.tabs[m.cur].refreshStatusCenter,
-            m.tabs[m.cur].refreshStatusRight,
-            doTick(),
-        )
-
-    case statusMsg:
-        m.tabs[m.cur].updateStatus(msg)
-        return m, nil
-
-    case config.ButtonMsg:
-        m.overlay, cmd = m.overlay.Update(msg)
-
-	}
-
-
-    return m, cmd
-}
 
 func (m *model) SetDimensions(width int, height int) {
     m.dimensions.width = width

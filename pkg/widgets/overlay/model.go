@@ -6,14 +6,13 @@ import (
 
     gloss "github.com/charmbracelet/lipgloss"
     "github.com/charmbracelet/x/ansi"
-	"github.com/charmbracelet/bubbles/cursor"
 )
 
 var ansiStyleRegexp = regexp.MustCompile(`\x1b[[\d;]*m`)
 
 const (
-    defaultWidth = 60
-    defaultHeight = 20
+    DefaultWidth = 60
+    DefaultHeight = 20
 )
 
 type dimensions struct {
@@ -39,9 +38,6 @@ type ModelBase struct {
     // The current styling to use
     style       gloss.Style
 
-    // The overlay menu cursor
-    Cursor      cursor.Model
-
     // The width of the overlay
     width       int
 
@@ -61,11 +57,9 @@ type ModelBase struct {
 
 // Creates a new model with default settings
 func NewBase() ModelBase {
-    cur := cursor.New()
     style := gloss.NewStyle().
         Border(gloss.RoundedBorder()).
-        Background(gloss.Color("#9851c4")).
-        Foreground(gloss.Color("#cfcbd1")).
+        BorderStyle(gloss.DoubleBorder()).
         Bold(true).
         Padding(2)
 
@@ -74,12 +68,11 @@ func NewBase() ModelBase {
         style: style,
         col: 0,
         row: 0,
-        Cursor: cur,
         Show: false,
     }
 
-    m.SetWidth(defaultWidth)
-    m.SetHeight(defaultHeight)
+    m.SetWidth(DefaultWidth)
+    m.SetHeight(DefaultHeight)
 
     return m
 }
