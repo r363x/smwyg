@@ -3,6 +3,7 @@ package tui
 import (
     "github.com/r363x/dbmanager/pkg/widgets/overlay"
     "github.com/r363x/dbmanager/pkg/widgets/config"
+    "github.com/r363x/dbmanager/pkg/widgets/button"
 
     "github.com/charmbracelet/bubbles/textinput"
     gloss "github.com/charmbracelet/lipgloss"
@@ -57,7 +58,7 @@ func createConfigView() config.Model {
         Align(gloss.Center).
         Width(overlay.DefaultWidth-2)
 
-    btnClose := config.NewButton("Close")
+    btnClose := button.New("Close")
 
     content := gloss.JoinVertical(0,
         title.Render("Connect to database"),

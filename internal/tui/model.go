@@ -2,6 +2,7 @@ package tui
 
 import (
 	"github.com/r363x/dbmanager/pkg/widgets/config"
+	"github.com/r363x/dbmanager/pkg/widgets/button"
 
 	tea "github.com/charmbracelet/bubbletea"
     "github.com/charmbracelet/bubbles/textarea"
@@ -61,7 +62,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
         m.tabs[m.cur].updateStatus(msg)
         return m, nil
 
-    case config.ButtonMsg:
+    case button.Msg:
         m.overlay, cmd = m.overlay.Update(msg)
 
 	}
