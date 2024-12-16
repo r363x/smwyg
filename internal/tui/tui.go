@@ -2,7 +2,7 @@ package tui
 
 import (
     "time"
-    "github.com/r363x/dbmanager/pkg/widgets/tab"
+    "github.com/r363x/dbmanager/internal/tui/tab"
     "github.com/r363x/dbmanager/pkg/widgets/results"
 
     gloss "github.com/charmbracelet/lipgloss"
@@ -20,8 +20,8 @@ type dimensions struct {
 
 type tickMsg time.Time
 
-func doTick() tea.Cmd {
-    return tea.Tick(time.Second * 3, func(t time.Time) tea.Msg {
+func doTick(sec time.Duration) tea.Cmd {
+    return tea.Tick(time.Second * sec, func(t time.Time) tea.Msg {
         return tickMsg(t)
     })
 }

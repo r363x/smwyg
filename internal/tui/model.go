@@ -3,7 +3,7 @@ package tui
 import (
 	"github.com/r363x/dbmanager/pkg/widgets/config"
 	"github.com/r363x/dbmanager/pkg/widgets/button"
-	"github.com/r363x/dbmanager/pkg/widgets/tab"
+	"github.com/r363x/dbmanager/internal/tui/tab"
 	"github.com/r363x/dbmanager/pkg/widgets/results"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -37,7 +37,7 @@ func (m model) Init() tea.Cmd {
         tab.RefreshStatusLeft,
         tab.RefreshStatusCenter(""),
         tab.RefreshStatusRight,
-        doTick(),
+        doTick(3),
     )
 
 	return tea.Batch(cmd...)
@@ -73,7 +73,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
             curTab.RefreshStatusLeft,
             curTab.RefreshStatusCenter(""),
             curTab.RefreshStatusRight,
-            doTick(),
+            doTick(3),
         )
 
     // case status.Msg:

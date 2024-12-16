@@ -57,17 +57,17 @@ type Model struct {
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
     var (
-        cmd     []tea.Cmd
-        ptrResults *results.Model
-        ptrQuery   *textarea.Model
+        cmd        []tea.Cmd
+        idxQuery   int
+        idxResults int
     )
 
     for i := range m.Elements {
-        switch element := m.Elements[i].(type) {
+        switch m.Elements[i].(type) {
         case *textarea.Model:
-            ptrQuery = element
+            idxQuery = i
         case *results.Model:
-            ptrResults = element
+            idxResults = i
         }
     }
 
@@ -77,17 +77,14 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
         switch msg.Type {
 
         case tea.KeyCtrlQ:
-            for _, element := range m.Elements {
-                element.Blur()
-            }
-            cmd = append(cmd, ptrQuery.Focus())
+            m.BlurAll()
+            cmd = append(cmd, m.Elements[idxQuery].Focus())
+            m.cur = idxQuery
 
         case tea.KeyCtrlR:
-            for _, element := range m.Elements {
-                element.Blur()
-            }
-            cmd = append(cmd, ptrResults.Focus())
-
+            m.BlurAll()
+            cmd = append(cmd, m.Elements[idxResults].Focus())
+            m.cur = idxResults
 
         case tea.KeyF5:
             if element, ok := m.Elements[m.cur].(*textarea.Model); ok {
@@ -103,19 +100,18 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
                 }
             }
             m.RefreshDbView()
-            return m, nil
 
         default:
             switch element := m.Elements[m.cur].(type) {
             case *textarea.Model:
-                e, cmd := element.Update(msg)
+                e, c := element.Update(msg)
                 m.Elements[m.cur] = &e
-                return m, cmd
+                cmd = append(cmd, c, textarea.Blink)
 
             case *results.Model:
-                e, cmd := element.Update(msg)
+                e, c := element.Update(msg)
                 m.Elements[m.cur] = &e
-                return m, cmd
+                cmd = append(cmd, c)
             }
         }
 
@@ -134,15 +130,12 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
     case status.Msg:
         m.UpdateStatus(msg)
-        return m, nil
 
     case results.Msg:
-        _ptr, _cmd := ptrResults.Update(msg)
-        *ptrResults = _ptr
-        return m, _cmd
-
+        updated, _cmd := m.Elements[idxResults].(*results.Model).Update(msg)
+        m.Elements[idxResults] = &updated
+        cmd = append(cmd, _cmd)
     }
-
 
     return m, tea.Batch(cmd...)
 }
@@ -334,5 +327,11 @@ func (m *Model) RefreshStatusRight() tea.Msg {
 func (m *Model) SetDimentions(width, height int) {
     m.dimensions.width = width
     m.dimensions.height = height
+}
+
+func (m *Model) BlurAll() {
+    for _, element := range m.Elements {
+        element.Blur()
+    }
 }
 
