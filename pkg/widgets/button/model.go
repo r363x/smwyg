@@ -67,6 +67,7 @@ func (m *Model) Focus() tea.Cmd {
 }
 
 func (m *Model) Blur() {
+    m.focused = false
     m.style = m.styleUnselected
 }
 

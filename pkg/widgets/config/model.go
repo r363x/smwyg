@@ -36,10 +36,10 @@ func New(views []View) Model {
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
     var cmd tea.Cmd
 
+    view := &m.views[m.cur]
+
     switch msg := msg.(type) {
 	case tea.KeyMsg:
-
-        view := &m.views[m.cur]
 
 		switch msg.Type {
         case tea.KeyDown:
@@ -59,6 +59,11 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
         default:
             cmd = m.updateElements(msg)
         }
+
+    case button.Msg:
+        btn := *view.Elements[view.selected].(*button.Model)
+        btn, cmd = btn.Update(msg)
+        view.Elements[view.selected] = &btn
     }
 
     return m, cmd
