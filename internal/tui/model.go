@@ -3,6 +3,8 @@ package tui
 import (
 	"github.com/r363x/dbmanager/pkg/widgets/config"
 	"github.com/r363x/dbmanager/pkg/widgets/button"
+	"github.com/r363x/dbmanager/pkg/widgets/tab"
+	"github.com/r363x/dbmanager/pkg/widgets/results"
 
 	tea "github.com/charmbracelet/bubbletea"
     "github.com/charmbracelet/bubbles/textarea"
@@ -10,25 +12,41 @@ import (
 
 
 type model struct {
-    tabs []tab
+    tabs []tab.Model
     cur int
     overlay config.Model
-    dimensions dimensions
 }
 
 func (m model) Init() tea.Cmd {
-	return tea.Batch(
+
+    tab := &m.tabs[m.cur]
+
+    cmd := make([]tea.Cmd, len(tab.Elements))
+
+    for i := range tab.Elements {
+        switch element := tab.Elements[i].(type) {
+        case *textarea.Model:
+            *element, cmd[i] = element.Update(nil)
+        case *results.Model:
+            *element, cmd[i] = element.Update(nil)
+        }
+    }
+
+    cmd = append(cmd,
         textarea.Blink,
-        m.tabs[m.cur].refreshStatusLeft,
-        m.tabs[m.cur].refreshStatusCenter,
-        m.tabs[m.cur].refreshStatusRight,
+        tab.RefreshStatusLeft,
+        tab.RefreshStatusCenter(""),
+        tab.RefreshStatusRight,
         doTick(),
     )
+
+	return tea.Batch(cmd...)
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
     var cmd tea.Cmd
+    curTab := m.tabs[m.cur]
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -41,7 +59,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
             if m.overlay.Show {
                 m.overlay, cmd = m.overlay.Update(msg)
             } else {
-                cmd = m.tabs[m.cur].update(msg)
+                m.tabs[m.cur], cmd = curTab.Update(msg)
             }
         }
 
@@ -52,19 +70,25 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
     case tickMsg:
         return m, tea.Batch(
-            m.tabs[m.cur].refreshStatusLeft,
-            m.tabs[m.cur].refreshStatusCenter,
-            m.tabs[m.cur].refreshStatusRight,
+            curTab.RefreshStatusLeft,
+            curTab.RefreshStatusCenter(""),
+            curTab.RefreshStatusRight,
             doTick(),
         )
 
-    case statusMsg:
-        m.tabs[m.cur].updateStatus(msg)
-        return m, nil
+    // case status.Msg:
+    //     curTab.UpdateStatus(msg)
+    //     return m, nil
 
     case button.Msg:
         m.overlay, cmd = m.overlay.Update(msg)
 
+    default:
+        if m.overlay.Show {
+            m.overlay, cmd = m.overlay.Update(msg)
+        } else {
+            m.tabs[m.cur], cmd = curTab.Update(msg)
+        }
 	}
 
 
@@ -74,12 +98,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m model) View() string {
 
-    tabView := m.tabs[m.cur].populate(m.dimensions)
+    cur := m.tabs[m.cur]
 
 	if m.overlay.Show {
-        m.overlay.SetBackground(tabView)
+        m.overlay.SetBackground(cur.View())
         return m.overlay.View()
 	}
 
-    return tabView
+    return cur.View()
 }
+
+func (m *model) SetDimensions(width , height int) {
+    m.tabs[m.cur].SetDimentions(width, height)
+    m.overlay.SetDimensions(width, height)
+}
+

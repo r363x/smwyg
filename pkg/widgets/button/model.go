@@ -9,115 +9,68 @@ import (
 )
 
 
-type MsgType int
-
-const (
-    ButtonPress MsgType = iota
-    ButtonRelease
-    ButtonSelect
-    ButtonUnselect
-)
-
-type Msg struct {
-    Type MsgType
-    Button *Model
-}
-
 type Model struct {
     label           string
     style           gloss.Style
     stylePressed    gloss.Style
     styleSelected   gloss.Style
     styleUnselected gloss.Style
+    focused         bool
     action          func()
 }
 
-func ButtonPressed(b *Model) tea.Cmd {
-    return func() tea.Msg {
-        return Msg{
-            Type: ButtonPress,
-            Button: b,
-        }
-    }
+func (m Model) Init() tea.Cmd {
+    return nil
 }
 
-func ButtonReleased(b *Model) tea.Cmd {
-    return func() tea.Msg {
-        return Msg{
-            Type: ButtonRelease,
-            Button: b,
-        }
-    }
-}
+func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
-func ButtonSelected(b *Model) tea.Cmd {
-    return func() tea.Msg {
-        return Msg{
-            Type: ButtonSelect,
-            Button: b,
-        }
-    }
-}
-
-func ButtonUnselected(b *Model) tea.Cmd {
-    return func() tea.Msg {
-        return Msg{
-            Type: ButtonUnselect,
-            Button: b,
-        }
-    }
-}
-
-func (b Model) Update(msg tea.Msg) (Model, tea.Cmd) {
     var cmd tea.Cmd
 
     switch msg := msg.(type) {
     case tea.KeyMsg:
         switch msg.Type {
         case tea.KeyEnter:
-            cmd = ButtonPressed(&b)
+            return m, ButtonPress
         }
     case Msg:
         switch msg.Type {
 
-        case ButtonPress:
-            msg.Button.style = msg.Button.stylePressed
-            cmd = ButtonReleased(&b)
+        case ButtonPressed:
+            m.style = m.stylePressed
+            return m, ButtonRelease
 
-        case ButtonRelease:
-            msg.Button.action()
+        case ButtonReleased:
+            m.action()
             time.Sleep(time.Millisecond * 100)
-            msg.Button.style = msg.Button.styleSelected
+            m.style = m.styleSelected
 
-        case ButtonSelect:
-            msg.Button.style = msg.Button.styleSelected
+        case ButtonSelected:
+            m.style = m.styleSelected
 
-        case ButtonUnselect:
-            msg.Button.style = msg.Button.styleUnselected
+        case ButtonUnselected:
+            m.Blur()
 
         }
     }
 
-    return b, cmd
+    return m, cmd
 }
 
-func (b Model) Init() tea.Cmd {
-    return nil
+func (m Model) View() string {
+    return m.style.Render(m.label)
 }
 
-func (b Model) View() string {
-    return b.style.Render(b.label)
+func (m *Model) Focus() tea.Cmd {
+    m.focused = true
+    return ButtonSelect
 }
 
-func (b *Model) Focus() tea.Cmd {
-    return ButtonSelected(b)
+func (m *Model) Blur() {
+    m.style = m.styleUnselected
 }
 
-func (b *Model) Blur() {
-    b.style = b.styleUnselected
-}
-
-func New(label string) Model {
+func New(label string) *Model {
 
     s := gloss.NewStyle().Align(gloss.Center)
 
@@ -133,7 +86,7 @@ func New(label string) Model {
         Border(gloss.NormalBorder()).
         Background(gloss.Color("#5a3478"))
 
-        return Model{
+        return &Model{
             label: label,
             style: sU,
             stylePressed: sP,
@@ -144,3 +97,4 @@ func New(label string) Model {
             },
         }
 }
+

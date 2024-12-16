@@ -2,6 +2,8 @@ package tui
 
 import (
     "time"
+    "github.com/r363x/dbmanager/pkg/widgets/tab"
+    "github.com/r363x/dbmanager/pkg/widgets/results"
 
     gloss "github.com/charmbracelet/lipgloss"
     "github.com/charmbracelet/bubbles/table"
@@ -16,14 +18,6 @@ type dimensions struct {
     height int
 }
 
-type tab struct {
-	dbManager  db.Manager
-    dbView     *tree.Tree
-    queryView  textarea.Model
-    resultView table.Model
-    statusView statusView
-}
-
 type tickMsg time.Time
 
 func doTick() tea.Cmd {
@@ -32,22 +26,26 @@ func doTick() tea.Cmd {
     })
 }
 
-func New(dbManager db.Manager) (*tea.Program, error) {
+func New(DbManager db.Manager) (*tea.Program, error) {
     var m model
-	tab := tab {
-        dbManager: dbManager,
-        dbView: tree.New(),
-        resultView: table.New(),
-        queryView: textarea.New(),
+	tab := tab.Model {
+        DbManager: DbManager,
+        DbView: tree.New(),
     }
 
-    tab.queryView.FocusedStyle.Base = tab.queryView.FocusedStyle.Base.
+    queryWidget := textarea.New()
+    resultsWidget := results.New()
+
+
+    // Set query area styles
+    queryWidget.FocusedStyle.Base = queryWidget.FocusedStyle.Base.
         BorderStyle(gloss.NormalBorder())
-    tab.queryView.BlurredStyle.Base = tab.queryView.BlurredStyle.Base.
+
+    queryWidget.BlurredStyle.Base = queryWidget.BlurredStyle.Base.
         BorderStyle(gloss.NormalBorder()).
         BorderForeground(gloss.Color("240"))
 
-    // Set table styles
+    // Set results area styles
     s := table.DefaultStyles()
     s.Header = s.Header.
         BorderStyle(gloss.NormalBorder()).
@@ -55,26 +53,29 @@ func New(dbManager db.Manager) (*tea.Program, error) {
         BorderBottom(true).
         Bold(true).
         AlignHorizontal(gloss.Center)
+
     s.Selected = s.Selected.
         Foreground(gloss.Color("229")).
         Background(gloss.Color("57")).
         Bold(true)
-    tab.resultView.SetStyles(s)
+
+    resultsWidget.Table.SetStyles(s)
 
     // Connect to the database
-    err := tab.dbManager.Connect()
+    err := tab.DbManager.Connect()
     if err == nil {
-        tab.refreshDbView()
+        tab.RefreshDbView()
     }
 
-	tab.queryView.Placeholder = "Enter your SQL query here"
-    tab.queryView.Focus()
+	queryWidget.Placeholder = "Enter your SQL query here"
+    queryWidget.Focus()
+
+    tab.Elements = append(tab.Elements, &queryWidget)
+    tab.Elements = append(tab.Elements, &resultsWidget)
 
     m.tabs = append(m.tabs, tab)
     m.cur = 0
     m.overlay = createConfigView()
-    // m.overlay.SetWidth(50)
-    // m.overlay.SetHeight(30)
 
 	return tea.NewProgram(m), nil
 }

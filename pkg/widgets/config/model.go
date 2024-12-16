@@ -1,35 +1,31 @@
 package config
 
 import (
+    "fmt"
 	"github.com/r363x/dbmanager/pkg/widgets/overlay"
 	"github.com/r363x/dbmanager/pkg/widgets/button"
 
 	tea "github.com/charmbracelet/bubbletea"
+    gloss "github.com/charmbracelet/lipgloss"
     "github.com/charmbracelet/bubbles/textinput"
 )
 
-
-type Selectable interface {
+type Element interface {
     Focus() tea.Cmd
     Blur()
 }
 
-
 type View struct {
     Name        string
-    Content     string
-    Selectables []Selectable
-    curFocus    int
+    Elements    []Element
+    InLabels    []string
+    selected    int
 }
 
 type Model struct {
     overlay.ModelBase
     views []View
     cur   int
-}
-
-func (m *Model) FocusOn(itemIndex int) {
-    m.views[m.cur].curFocus = itemIndex
 }
 
 func New(views []View) Model {
@@ -43,56 +39,91 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
     switch msg := msg.(type) {
 	case tea.KeyMsg:
 
-        cur := m.views[m.cur].curFocus
-        sel := m.views[m.cur].Selectables[cur]
+        view := &m.views[m.cur]
 
 		switch msg.Type {
         case tea.KeyDown:
-            next := cur + 1
-
-            if next < len(m.views[m.cur].Selectables) {
-                sel.Blur()
-                cmd = m.views[m.cur].Selectables[next].Focus()
-                m.views[m.cur].curFocus = next
+            if view.selected < len(view.Elements) - 1 {
+                view.Elements[view.selected].Blur()
+                view.selected++
+                cmd = view.Elements[view.selected].Focus()
             }
 
         case tea.KeyUp:
-            prev := cur - 1
-
-            if prev >= 0 {
-                sel.Blur()
-                cmd = m.views[m.cur].Selectables[prev].Focus()
-                m.views[m.cur].curFocus = prev
+            if view.selected >= 1 {
+                view.Elements[view.selected].Blur()
+                view.selected--
+                cmd = view.Elements[view.selected].Focus()
             }
 
         default:
-            switch sel := sel.(type) {
-            case *textinput.Model:
-                updated, _cmd := sel.Update(msg)
-                m.views[m.cur].Selectables[cur] = &updated
-                cmd = _cmd
-            case *button.Model:
-                updated, _cmd := sel.Update(msg)
-                m.views[m.cur].Selectables[cur] = &updated
-                cmd = _cmd
-            }
+            cmd = m.updateElements(msg)
         }
-    case button.Msg:
-        btn, _cmd := msg.Button.Update(msg)
-        m.views[m.cur].Selectables[m.views[m.cur].curFocus] = &btn
-        cmd = _cmd
     }
 
     return m, cmd
 }
 
+func (m *Model) updateElements(msg tea.Msg) tea.Cmd {
+
+    elements := m.views[m.cur].Elements
+
+    cmd := make([]tea.Cmd, len(elements))
+
+    for i, element := range elements {
+
+        switch element := element.(type) {
+        case *textinput.Model:
+            *element, cmd[i] = element.Update(msg)
+        case *button.Model:
+            *element, cmd[i] = element.Update(msg)
+        }
+    }
+
+    return tea.Batch(cmd...)
+}
+
 func (m Model) View() string {
 
-    m.SetContents(m.views[m.cur].Content)
-    return m.BaseView()
+    var (
+        box         = gloss.NewStyle().Width(overlay.DefaultWidth-2)
+        inputBorder = gloss.NewStyle().Border(gloss.NormalBorder()).Width(30)
+        titleBox    = box.Align(gloss.Center).Height(3)
+        inputsBox   = box.Align(gloss.Left)
+        buttonsBox  = box.Align(gloss.Center)
+        inputs      []string
+        buttons     []string
+    )
+
+
+    for i, element := range m.views[m.cur].Elements {
+
+        switch element := element.(type) {
+        case *textinput.Model:
+
+            inputs = append(inputs, gloss.JoinHorizontal(0,
+                fmt.Sprintf("\n%-10s", m.views[m.cur].InLabels[i] + ": "),
+                inputBorder.Render(element.View(),
+            )))
+
+        case *button.Model:
+            buttons = append(buttons, element.View())
+        }
+    }
+
+    // Cosmetics
+    inputs = append(inputs, "\n\n\n")
+
+    content := gloss.JoinVertical(0,
+        titleBox.Render("Connect to database"),
+        inputsBox.Render(gloss.JoinVertical(0, inputs...)),
+        buttonsBox.Render(gloss.JoinHorizontal(0.6, buttons...)),
+    )
+
+    return m.ModelBase.View(content)
 }
 
 func (m Model) Init() tea.Cmd {
-    return nil
+    return textinput.Blink
 }
 

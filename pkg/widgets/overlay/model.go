@@ -26,9 +26,6 @@ type ModelBase struct {
     // Store errors here
     Err         error
 
-    // The contents of the overlay
-    content     string
-
     // The contents of the overlay background
     bg          string
 
@@ -89,22 +86,17 @@ func (m *ModelBase) SetHeight(height int) {
     m.style = m.style.Height(m.height)
 }
 
-// Sets the contents of the overlay
-func (m *ModelBase) SetContents(content string) {
-    m.content = content
-}
-
 // Sets the contents of the overlay background
 func (m *ModelBase) SetBackground(content string) {
     m.bg = content
 }
 
-func (m ModelBase) BaseView() string {
+func (m ModelBase) View(content string) string {
 
     row := (m.dimensions.height - m.height) / 2
     col := (m.dimensions.width - m.width) / 2
 
-	overlay := m.style.Render(m.content)
+	overlay := m.style.Render(content)
 
 	bgLines := strings.Split(m.bg, "\n")
 	overlayLines := strings.Split(overlay, "\n")
@@ -122,7 +114,6 @@ func (m ModelBase) BaseView() string {
 	}
 
 	return strings.Join(bgLines, "\n")
-
 }
 
 func (m *ModelBase) SetDimensions(width int, height int) {
