@@ -13,8 +13,8 @@ type Model struct {
     label           string
     style           gloss.Style
     stylePressed    gloss.Style
-    styleSelected   gloss.Style
-    styleUnselected gloss.Style
+    styleFocused    gloss.Style
+    styleBlurred    gloss.Style
     focused         bool
     action          func()
 }
@@ -38,19 +38,12 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
         case ButtonPressed:
             m.style = m.stylePressed
-            return m, ButtonRelease
+            cmd = ButtonRelease
 
         case ButtonReleased:
             m.action()
-            time.Sleep(time.Millisecond * 100)
-            m.style = m.styleSelected
-
-        case ButtonSelected:
-            m.style = m.styleSelected
-
-        case ButtonUnselected:
-            m.Blur()
-
+            time.Sleep(time.Millisecond * 500)
+            m.Focus()
         }
     }
 
@@ -63,36 +56,36 @@ func (m Model) View() string {
 
 func (m *Model) Focus() tea.Cmd {
     m.focused = true
-    return ButtonSelect
+    m.style = m.styleFocused
+    return nil
 }
 
 func (m *Model) Blur() {
     m.focused = false
-    m.style = m.styleUnselected
+    m.style = m.styleBlurred
 }
 
 func New(label string) *Model {
 
-    s := gloss.NewStyle().Align(gloss.Center)
+    s := gloss.NewStyle().
+        Align(gloss.Center).
+        PaddingLeft(2).
+        PaddingRight(2).
+        MarginLeft(1).
+        MarginRight(1)
 
-    sP := s.
-        Border(gloss.RoundedBorder()).
-        Background(gloss.Color("#c3ccdb"))
+    sP := s.Background(gloss.Color("#c3ccdb"))
 
-    sS := s.
-        Border(gloss.NormalBorder()).
-        Background(gloss.Color("#8544b8"))
+    sS := s.Background(gloss.Color("#8544b8"))
 
-    sU := s.
-        Border(gloss.NormalBorder()).
-        Background(gloss.Color("#5a3478"))
+    sU := s.Background(gloss.Color("#5a3478"))
 
         return &Model{
             label: label,
             style: sU,
             stylePressed: sP,
-            styleSelected: sS,
-            styleUnselected: sU,
+            styleFocused: sS,
+            styleBlurred: sU,
             action: func() {
                 log.Print("NO ACTION ATTACHED!")
             },

@@ -91,11 +91,11 @@ func (m *Model) updateElements(msg tea.Msg) tea.Cmd {
 func (m Model) View() string {
 
     var (
-        box         = gloss.NewStyle().Width(overlay.DefaultWidth-2)
+        box         = gloss.NewStyle().Width(overlay.DefaultWidth-2).Align(gloss.Center)
         inputBorder = gloss.NewStyle().Border(gloss.NormalBorder()).Width(30)
-        titleBox    = box.Align(gloss.Center).Height(3)
-        inputsBox   = box.Align(gloss.Left)
-        buttonsBox  = box.Align(gloss.Center)
+        titleBox    = box.Height(3)
+        inputsBox   = box.Align(gloss.Left).PaddingLeft(4).MarginBottom(3)
+        buttonsBox  = box
         inputs      []string
         buttons     []string
     )
@@ -116,13 +116,10 @@ func (m Model) View() string {
         }
     }
 
-    // Cosmetics
-    inputs = append(inputs, "\n\n\n")
-
     content := gloss.JoinVertical(0,
         titleBox.Render("Connect to database"),
         inputsBox.Render(gloss.JoinVertical(0, inputs...)),
-        buttonsBox.Render(gloss.JoinHorizontal(0.6, buttons...)),
+        buttonsBox.Render(gloss.JoinHorizontal(0, buttons...)),
     )
 
     return m.ModelBase.View(content)
