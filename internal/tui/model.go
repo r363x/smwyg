@@ -8,6 +8,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
     "github.com/charmbracelet/bubbles/textarea"
+    "github.com/charmbracelet/bubbles/textinput"
 )
 
 
@@ -34,6 +35,7 @@ func (m model) Init() tea.Cmd {
 
     cmd = append(cmd,
         textarea.Blink,
+        textinput.Blink,
         tab.RefreshStatusLeft,
         tab.RefreshStatusCenter(""),
         tab.RefreshStatusRight,

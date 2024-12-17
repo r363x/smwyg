@@ -3,47 +3,34 @@ package tui
 import (
     "github.com/r363x/dbmanager/pkg/widgets/config"
     "github.com/r363x/dbmanager/pkg/widgets/button"
-
-    "github.com/charmbracelet/bubbles/textinput"
-    gloss "github.com/charmbracelet/lipgloss"
 )
-
 
 func createConfigView() config.Model {
 
     var (
-        focusedStyle = gloss.NewStyle().Foreground(gloss.Color("205"))
-        noStyle = gloss.NewStyle()
+        views = []config.View{{Name: "Connect"}}
+        inLabels = []string{"Type", "Host", "Port", "User", "Password", "DB Name"}
+        btnLabels = []string{"Close", "Save"}
     )
 
-    var views = []config.View{{
-        Name: "Connect",
-        InLabels: []string{"Type", "Host", "Port", "User", "Password", "DB Name"},
-    }}
+    elements := make([]config.Element, len(inLabels))
 
-    elements := make([]config.Element, 8)
+    for i, label := range inLabels {
 
-    for i := range 6 {
-
-        element := textinput.New()
-
+        element := config.NewInput(label)
         switch i {
         case 0:
-            element.PromptStyle = focusedStyle
-            element.TextStyle = focusedStyle
-            element.Cursor.Style = focusedStyle
-
+            element.Focus()
         default:
-            element.PromptStyle = noStyle
-            element.TextStyle = noStyle
-            element.Cursor.Style = noStyle
+            element.Blur()
         }
 
         elements[i] = &element
     }
 
-    elements[6] = button.New("Close")
-    elements[7] = button.New("Save")
+    for _, label := range btnLabels {
+        elements = append(elements, button.New(label))
+    }
 
     views[0].Elements = elements
     m := config.New(views)

@@ -7,7 +7,6 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
     gloss "github.com/charmbracelet/lipgloss"
-    "github.com/charmbracelet/bubbles/textinput"
 )
 
 type Element interface {
@@ -18,8 +17,7 @@ type Element interface {
 type View struct {
     Name        string
     Elements    []Element
-    InLabels    []string
-    selected    int
+    cur    int
 }
 
 type Model struct {
@@ -43,17 +41,17 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
 		switch msg.Type {
         case tea.KeyDown:
-            if view.selected < len(view.Elements) - 1 {
-                view.Elements[view.selected].Blur()
-                view.selected++
-                cmd = view.Elements[view.selected].Focus()
+            if view.cur < len(view.Elements) - 1 {
+                view.Elements[view.cur].Blur()
+                view.cur++
+                cmd = view.Elements[view.cur].Focus()
             }
 
         case tea.KeyUp:
-            if view.selected >= 1 {
-                view.Elements[view.selected].Blur()
-                view.selected--
-                cmd = view.Elements[view.selected].Focus()
+            if view.cur >= 1 {
+                view.Elements[view.cur].Blur()
+                view.cur--
+                cmd = view.Elements[view.cur].Focus()
             }
 
         default:
@@ -61,9 +59,9 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
         }
 
     case button.Msg:
-        btn := *view.Elements[view.selected].(*button.Model)
+        btn := *view.Elements[view.cur].(*button.Model)
         btn, cmd = btn.Update(msg)
-        view.Elements[view.selected] = &btn
+        view.Elements[view.cur] = &btn
     }
 
     return m, cmd
@@ -78,7 +76,7 @@ func (m *Model) updateElements(msg tea.Msg) tea.Cmd {
     for i, element := range elements {
 
         switch element := element.(type) {
-        case *textinput.Model:
+        case *Input:
             *element, cmd[i] = element.Update(msg)
         case *button.Model:
             *element, cmd[i] = element.Update(msg)
@@ -96,18 +94,17 @@ func (m Model) View() string {
         titleBox    = box.Height(3)
         inputsBox   = box.Align(gloss.Left).PaddingLeft(4).MarginBottom(3)
         buttonsBox  = box
-        inputs      []string
-        buttons     []string
+
+        inputs  []string
+        buttons []string
     )
 
-
-    for i, element := range m.views[m.cur].Elements {
+    for _, element := range m.views[m.cur].Elements {
 
         switch element := element.(type) {
-        case *textinput.Model:
-
+        case *Input:
             inputs = append(inputs, gloss.JoinHorizontal(0,
-                fmt.Sprintf("\n%-10s", m.views[m.cur].InLabels[i] + ": "),
+                fmt.Sprintf("\n%-10s", element.label + ": "),
                 inputBorder.Render(element.View(),
             )))
 
@@ -123,9 +120,5 @@ func (m Model) View() string {
     )
 
     return m.ModelBase.View(content)
-}
-
-func (m Model) Init() tea.Cmd {
-    return textinput.Blink
 }
 
