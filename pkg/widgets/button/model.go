@@ -8,6 +8,22 @@ import (
 	gloss "github.com/charmbracelet/lipgloss"
 )
 
+var (
+
+    style = gloss.NewStyle().
+        Align(gloss.Center).
+        PaddingLeft(2).
+        PaddingRight(2).
+        MarginLeft(1).
+        MarginRight(1)
+
+    stylePressed = style.Background(gloss.Color("#c3ccdb"))
+
+    styleFocused = style.Background(gloss.Color("#8544b8"))
+
+    styleBlurred = style.Background(gloss.Color("#5a3478"))
+)
+
 
 type Model struct {
     label           string
@@ -70,25 +86,13 @@ func (m *Model) SetAction(fn func() tea.Msg) {
 
 func New(label string) *Model {
 
-    s := gloss.NewStyle().
-        Align(gloss.Center).
-        PaddingLeft(2).
-        PaddingRight(2).
-        MarginLeft(1).
-        MarginRight(1)
-
-    sP := s.Background(gloss.Color("#c3ccdb"))
-
-    sS := s.Background(gloss.Color("#8544b8"))
-
-    sU := s.Background(gloss.Color("#5a3478"))
 
     return &Model{
         label: label,
-        style: sU,
-        stylePressed: sP,
-        styleFocused: sS,
-        styleBlurred: sU,
+        style: styleBlurred,
+        stylePressed: stylePressed,
+        styleFocused: styleFocused,
+        styleBlurred: styleBlurred,
         action: func() tea.Msg {
             log.Printf("Button '%s': NO ACTION ATTACHED!", label)
             return nil

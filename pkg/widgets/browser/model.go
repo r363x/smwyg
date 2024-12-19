@@ -18,14 +18,28 @@ type Model struct {
 var (
     styleServer = gloss.NewStyle().Bold(true)
     styleCurDB = gloss.NewStyle().Bold(true)
+    styleFocused = gloss.NewStyle().Foreground(gloss.Color("#8544b8"))
+    styleBlurred = gloss.NewStyle().Foreground(gloss.Color("#5a3478"))
 )
 
+func selector(_ tree.Children, i int) gloss.Style {
+    if selected == i {
+        return styleFocused
+    }
+    return styleBlurred
+}
+
 func New() Model {
+
+	t := tree.New().EnumeratorStyleFunc(selector)
+
     return Model{
-        Tree: tree.New(),
+        Tree: t,
         focused: false,
     }
 }
+
+
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
     var cmd tea.Cmd
