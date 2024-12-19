@@ -11,7 +11,6 @@ import (
     "github.com/charmbracelet/bubbles/textinput"
 )
 
-
 type model struct {
     tabs []tab.Model
     cur int
@@ -22,18 +21,7 @@ func (m model) Init() tea.Cmd {
 
     tab := &m.tabs[m.cur]
 
-    cmd := make([]tea.Cmd, len(tab.Elements))
-
-    for i := range tab.Elements {
-        switch element := tab.Elements[i].(type) {
-        case *textarea.Model:
-            *element, cmd[i] = element.Update(nil)
-        case *results.Model:
-            *element, cmd[i] = element.Update(nil)
-        }
-    }
-
-    cmd = append(cmd,
+    return tea.Batch(
         textarea.Blink,
         textinput.Blink,
         tab.RefreshStatusLeft,
@@ -42,8 +30,6 @@ func (m model) Init() tea.Cmd {
         tab.RefreshBrowser,
         doTick(3),
     )
-
-	return tea.Batch(cmd...)
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -55,9 +41,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyCtrlC, tea.KeyEsc:
-			return m, tea.Quit
+			cmd = tea.Quit
+
         case tea.KeyCtrlO:
             m.overlay.Show = !m.overlay.Show
+
         default:
             if m.overlay.Show {
                 m.overlay, cmd = m.overlay.Update(msg)
@@ -69,22 +57,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
     case tea.WindowSizeMsg:
         m.SetDimensions(msg.Width, msg.Height)
 
-        return m, nil
-
     case tickMsg:
-        return m, tea.Batch(
+        cmd = tea.Batch(
             curTab.RefreshStatusLeft,
             curTab.RefreshStatusCenter(""),
             curTab.RefreshStatusRight,
             doTick(3),
         )
 
-    // case status.Msg:
-    //     curTab.UpdateStatus(msg)
-    //     return m, nil
-
-    case button.Msg:
-        m.overlay, cmd = m.overlay.Update(msg)
 
     default:
         if m.overlay.Show {
@@ -93,7 +73,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
             m.tabs[m.cur], cmd = curTab.Update(msg)
         }
 	}
-
 
     return m, cmd
 }

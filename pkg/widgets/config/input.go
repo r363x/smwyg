@@ -1,4 +1,4 @@
-package config
+package input
 
 import (
     tea "github.com/charmbracelet/bubbletea"
@@ -12,19 +12,19 @@ var (
 )
 
 
-type Input struct {
+type Model struct {
     textinput.Model
-    label string
+    Label string
 }
 
-func (m Input) Update(msg tea.Msg) (Input, tea.Cmd) {
+func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
     model, cmd := m.Model.Update(msg)
     m.Model = model
 
     return m, cmd
 }
 
-func (m *Input) Focus() tea.Cmd {
+func (m *Model) Focus() tea.Cmd {
     m.Model.PromptStyle = FocusedStyle
     m.Model.TextStyle = FocusedStyle
     m.Model.Cursor.Style = FocusedStyle
@@ -32,14 +32,14 @@ func (m *Input) Focus() tea.Cmd {
     return m.Model.Focus()
 }
 
-func (m *Input) Blur() {
+func (m *Model) Blur() {
     m.Model.PromptStyle = NoStyle
     m.Model.TextStyle = NoStyle
     m.Model.Cursor.Style = NoStyle
     m.Model.Blur()
 }
 
-func NewInput(label string) Input {
-    return Input{textinput.New(), label}
+func New(label string) Model {
+    return Model{textinput.New(), label}
 }
 

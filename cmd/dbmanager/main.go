@@ -21,27 +21,37 @@ func setupLogging(cfg config.LoggingConfig) *os.File {
 }
 
 func main() {
+    var dbManager db.Manager
+
 	// Load configuration
 	cfg, err := config.Load()
-	if err != nil {
-		log.Fatalf("Failed to load configuration: %v", err)
-	}
 
-    // Initialize logging
-    logFile := setupLogging(cfg.LoggingConfig)
-    defer logFile.Close()
-
-	// Initialize database manager
-	dbManager, err := db.NewManager(cfg.DatabaseConfig)
 	if err != nil {
-		log.Fatalf("Failed to initialize database manager: %v", err)
-	}
+		log.Printf("Failed to load configuration: %v. Using interactive menu.", err)
+        logFile := setupLogging(config.LoggingConfig{
+            LogFile: "debug.log",
+            LogLevel: "debug",
+        })
+        defer logFile.Close()
 
-	// Initialize TUI
-	ui, err := tui.New(dbManager)
-	if err != nil {
-		log.Fatalf("Failed to initialize TUI: %v", err)
-	}
+    } else {
+        // Initialize logging
+        logFile := setupLogging(cfg.LoggingConfig)
+        defer logFile.Close()
+
+        // Initialize database manager
+        dbManager, err = db.NewManager(cfg.DatabaseConfig)
+        if err != nil {
+            log.Fatalf("Failed to initialize database manager: %v", err)
+        }
+
+    }
+
+    // Initialize TUI
+    ui, err := tui.New(dbManager)
+    if err != nil {
+        log.Fatalf("Failed to initialize TUI: %v", err)
+    }
 
 	// Run the application
 	if _, err := ui.Run();

@@ -16,7 +16,7 @@ type Model struct {
     styleFocused    gloss.Style
     styleBlurred    gloss.Style
     focused         bool
-    action          func()
+    action          func() tea.Msg
 }
 
 func (m Model) Init() tea.Cmd {
@@ -31,7 +31,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
     case tea.KeyMsg:
         switch msg.Type {
         case tea.KeyEnter:
-            return m, ButtonPress
+            cmd = ButtonPress
         }
     case Msg:
         switch msg.Type {
@@ -41,9 +41,8 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
             cmd = ButtonRelease
 
         case ButtonReleased:
-            m.action()
-            time.Sleep(time.Millisecond * 500)
-            m.Focus()
+            cmd = m.action
+            time.Sleep(time.Millisecond * 100)
         }
     }
 
@@ -65,6 +64,10 @@ func (m *Model) Blur() {
     m.style = m.styleBlurred
 }
 
+func (m *Model) SetAction(fn func() tea.Msg) {
+    m.action = fn
+}
+
 func New(label string) *Model {
 
     s := gloss.NewStyle().
@@ -80,15 +83,16 @@ func New(label string) *Model {
 
     sU := s.Background(gloss.Color("#5a3478"))
 
-        return &Model{
-            label: label,
-            style: sU,
-            stylePressed: sP,
-            styleFocused: sS,
-            styleBlurred: sU,
-            action: func() {
-                log.Print("NO ACTION ATTACHED!")
-            },
-        }
+    return &Model{
+        label: label,
+        style: sU,
+        stylePressed: sP,
+        styleFocused: sS,
+        styleBlurred: sU,
+        action: func() tea.Msg {
+            log.Printf("Button '%s': NO ACTION ATTACHED!", label)
+            return nil
+        },
+    }
 }
 

@@ -2,14 +2,19 @@ package tab
 
 import (
     "fmt"
+    "log"
+    "strconv"
+    cfg "github.com/r363x/dbmanager/internal/config"
+    "github.com/r363x/dbmanager/pkg/widgets/config"
     "github.com/r363x/dbmanager/pkg/widgets/status"
     "github.com/r363x/dbmanager/pkg/widgets/results"
     "github.com/r363x/dbmanager/pkg/widgets/browser"
 
-	tea "github.com/charmbracelet/bubbletea"
+    tea "github.com/charmbracelet/bubbletea"
     gloss "github.com/charmbracelet/lipgloss"
     "github.com/charmbracelet/bubbles/textarea"
-	"github.com/r363x/dbmanager/internal/db"
+    "github.com/charmbracelet/lipgloss/tree"
+    "github.com/r363x/dbmanager/internal/db"
 
 )
 
@@ -18,21 +23,21 @@ type Element interface {
     Blur()
 }
 
-type MsgType int
+// type MsgType int
 
-const (
-    Focus MsgType = iota 
-    Blur
-    Refocus
-)
+// const (
+//     Focus MsgType = iota
+//     Blur
+//     Refocus
+// )
 
-type Msg struct {
-    Type    MsgType
-    Element Element
-}
+// type Msg struct {
+//     Type MsgType
+//     Data interface{}
+// }
 
 type dimensions struct {
-    width int
+    width  int
     height int
 }
 
@@ -50,7 +55,7 @@ type Model struct {
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
     var (
-        cmd        []tea.Cmd
+        cmds       []tea.Cmd
         idxQuery   int
         idxResults int
         idxBrowser int
@@ -74,78 +79,125 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
         case tea.KeyCtrlQ:
             m.BlurAll()
-            cmd = append(cmd, m.Elements[idxQuery].Focus())
+            cmds = append(cmds, m.Elements[idxQuery].Focus())
             m.cur = idxQuery
 
         case tea.KeyCtrlR:
             m.BlurAll()
-            cmd = append(cmd, m.Elements[idxResults].Focus())
+            cmds = append(cmds, m.Elements[idxResults].Focus())
             m.cur = idxResults
 
         case tea.KeyCtrlB:
             m.BlurAll()
-            cmd = append(cmd, m.Elements[idxBrowser].Focus())
+            cmds = append(cmds, m.Elements[idxBrowser].Focus())
             m.cur = idxBrowser
 
         case tea.KeyF5:
             if element, ok := m.Elements[m.cur].(*textarea.Model); ok {
                 if query := element.Value(); len(query) > 0 {
 
-                   data, err := m.DbManager.ExecuteQuery(query); if err != nil {
-                       return m, m.RefreshStatusCenter(err.Error())
-                   }
-                   return m, tea.Batch(
-                       results.UpdateResults(data),
-                       m.RefreshStatusCenter("Query: OK"),
-                   )
+                    if m.DbManager != nil {
+                        data, err := m.DbManager.ExecuteQuery(query); if err != nil {
+                            return m, m.RefreshStatusCenter(err.Error())
+                        }
+                        return m, tea.Batch(
+                            results.UpdateResults(data),
+                            m.RefreshStatusCenter("Query: OK"),
+                        )
+                    } else {
+                        return m, m.RefreshStatusCenter("Query: cannot execute query (no connection)")
+                    }
                 }
             }
-            cmd = append(cmd, m.RefreshBrowser)
+            cmds = append(cmds, m.RefreshBrowser)
 
         default:
             switch element := m.Elements[m.cur].(type) {
             case *textarea.Model:
-                e, c := element.Update(msg)
+                e, cmd := element.Update(msg)
                 m.Elements[m.cur] = &e
-                cmd = append(cmd, c, textarea.Blink)
+                cmds = append(cmds, cmd)
 
             case *results.Model:
-                e, c := element.Update(msg)
+                e, cmd := element.Update(msg)
                 m.Elements[m.cur] = &e
-                cmd = append(cmd, c)
+                cmds = append(cmds, cmd)
 
             case *browser.Model:
-                e, c := element.Update(msg)
+                e, cmd := element.Update(msg)
                 m.Elements[m.cur] = &e
-                cmd = append(cmd, c)
+                cmds = append(cmds, cmd)
             }
         }
 
-    case Msg:
+    case config.Msg:
+
         switch msg.Type {
-        case Focus:
-            cmd = append(cmd, msg.Element.Focus())
+        case config.FormData:
 
-        case Blur:
-            msg.Element.Blur()
+            c := cfg.Config{}
 
-        case Refocus:
-            cmd = append(cmd, m.Elements[m.lastFocus].Focus())
+            if data, ok := msg.Data.(map[string]string); ok {
+
+                for key, value := range data {
+
+                    switch key {
+                    case "Type":
+                        c.DatabaseConfig.Type = value
+                    case "Host":
+                        c.DatabaseConfig.Host = value
+                    case "Port":
+                        port, err := strconv.Atoi(value)
+                        if err != nil {
+                            log.Fatal("Error: ", err)
+                        }
+                        c.DatabaseConfig.Port = port
+                    case "User":
+                        c.DatabaseConfig.User = value
+                    case "Password":
+                        c.DatabaseConfig.Password = value
+                    case "DB Name":
+                        c.DatabaseConfig.DBName = value
+                    }
+                    log.Print(value)
+                }
+
+
+                dbManager, err := db.NewManager(c.DatabaseConfig)
+                if err != nil {
+                    cmds = append(cmds, m.RefreshStatusCenter(fmt.Sprintf("Error: %v", err)))
+                }
+                m.DbManager = dbManager
+                err = m.DbManager.Connect()
+                if err == nil {
+                    m.RefreshDbView()
+                }
+            }
+
+
+
+        // case Focus:
+        //     cmd = append(cmd, msg.Element.Focus())
+
+        // case Blur:
+        //     msg.Element.Blur()
+
+        // case Refocus:
+        //     cmd = append(cmd, m.Elements[m.lastFocus].Focus())
         }
-        return m, tea.Batch(cmd...)
 
     case status.Msg:
         m.UpdateStatus(msg)
 
     case browser.Msg:
-        updated, _cmd := m.Elements[idxBrowser].(*browser.Model).Update(msg)
+        updated, cmd := m.Elements[idxBrowser].(*browser.Model).Update(msg)
         m.Elements[idxBrowser] = &updated
-        cmd = append(cmd, _cmd)
+        cmds = append(cmds, cmd)
 
     case results.Msg:
-        updated, _cmd := m.Elements[idxResults].(*results.Model).Update(msg)
+        updated, cmd := m.Elements[idxResults].(*results.Model).Update(msg)
         m.Elements[idxResults] = &updated
-        cmd = append(cmd, _cmd)
+        cmds = append(cmds, cmd)
     }
 
     return m, tea.Batch(cmd...)
@@ -280,27 +332,34 @@ func (m *Model) UpdateStatus(msg status.Msg) {
 }
 
 func (m *Model) RefreshStatusLeft() tea.Msg {
-    msg := "Server: "
 
-    version, err := m.DbManager.GetVersion()
-    if err != nil {
-        msg += "N/A"
+    var (
+        msgServer = "Server: "
+        msgStatus = "Status: "
+    )
+
+    if m.DbManager == nil {
+        msgServer += "N/A"
+        msgStatus += "N/A"
+
     } else {
-        msg += version
-    }
-    msg += "   "
+        version, err := m.DbManager.GetVersion()
+        if err != nil {
+            msgServer += "N/A"
+        } else {
+            msgServer += version
+        }
 
-    msg += "Status: "
-
-    if err := m.DbManager.Status(); err != nil {
-        msg += fmt.Sprintf("Error: %s", err)
-    } else {
-        msg += "Connected"
+        if err := m.DbManager.Status(); err != nil {
+            msgStatus += err.Error()
+        } else {
+            msgStatus += "Connected"
+        }
     }
 
     return status.Msg{
         Section: status.SecLeft,
-        Message: msg,
+        Message: fmt.Sprintf("%s   %s", msgServer, msgStatus),
     }
 }
 
@@ -323,7 +382,20 @@ func (m *Model) RefreshStatusCenter(text string) tea.Cmd {
 }
 
 func (m *Model) RefreshStatusRight() tea.Msg {
-    msg := "User: " + m.DbManager.DbUser()
+    msg := "User: "
+
+    if m.DbManager == nil {
+        msg += "N/A"
+
+    } else {
+
+        if m.DbManager != nil {
+            msg += m.DbManager.DbUser()
+        } else {
+            msg += "N/A"
+        }
+    }
+
     return status.Msg{
         Section: status.SecRight,
         Message: msg,
