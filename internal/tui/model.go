@@ -39,6 +39,7 @@ func (m model) Init() tea.Cmd {
         tab.RefreshStatusLeft,
         tab.RefreshStatusCenter(""),
         tab.RefreshStatusRight,
+        tab.RefreshBrowser,
         doTick(3),
     )
 

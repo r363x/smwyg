@@ -2,21 +2,15 @@ package tab
 
 import (
     "fmt"
-    "log"
     "github.com/r363x/dbmanager/pkg/widgets/status"
     "github.com/r363x/dbmanager/pkg/widgets/results"
+    "github.com/r363x/dbmanager/pkg/widgets/browser"
 
 	tea "github.com/charmbracelet/bubbletea"
     gloss "github.com/charmbracelet/lipgloss"
     "github.com/charmbracelet/bubbles/textarea"
-    "github.com/charmbracelet/lipgloss/tree"
 	"github.com/r363x/dbmanager/internal/db"
 
-)
-
-var (
-    styleServer = gloss.NewStyle().Bold(true)
-    styleCurDB = gloss.NewStyle().Bold(true)
 )
 
 type Element interface {
@@ -48,7 +42,6 @@ type Model struct {
     Elements   []Element
     cur        int
 
-    DbView     *tree.Tree
     StatusView status.Model
     dimensions dimensions
     lastFocus  int
@@ -60,6 +53,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
         cmd        []tea.Cmd
         idxQuery   int
         idxResults int
+        idxBrowser int
     )
 
     for i := range m.Elements {
@@ -68,6 +62,8 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
             idxQuery = i
         case *results.Model:
             idxResults = i
+        case *browser.Model:
+            idxBrowser = i
         }
     }
 
@@ -86,6 +82,11 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
             cmd = append(cmd, m.Elements[idxResults].Focus())
             m.cur = idxResults
 
+        case tea.KeyCtrlB:
+            m.BlurAll()
+            cmd = append(cmd, m.Elements[idxBrowser].Focus())
+            m.cur = idxBrowser
+
         case tea.KeyF5:
             if element, ok := m.Elements[m.cur].(*textarea.Model); ok {
                 if query := element.Value(); len(query) > 0 {
@@ -99,7 +100,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
                    )
                 }
             }
-            m.RefreshDbView()
+            cmd = append(cmd, m.RefreshBrowser)
 
         default:
             switch element := m.Elements[m.cur].(type) {
@@ -109,6 +110,11 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
                 cmd = append(cmd, c, textarea.Blink)
 
             case *results.Model:
+                e, c := element.Update(msg)
+                m.Elements[m.cur] = &e
+                cmd = append(cmd, c)
+
+            case *browser.Model:
                 e, c := element.Update(msg)
                 m.Elements[m.cur] = &e
                 cmd = append(cmd, c)
@@ -130,6 +136,11 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
     case status.Msg:
         m.UpdateStatus(msg)
+
+    case browser.Msg:
+        updated, _cmd := m.Elements[idxBrowser].(*browser.Model).Update(msg)
+        m.Elements[idxBrowser] = &updated
+        cmd = append(cmd, _cmd)
 
     case results.Msg:
         updated, _cmd := m.Elements[idxResults].(*results.Model).Update(msg)
@@ -161,6 +172,7 @@ func (m Model) View() string {
 
         ptrQueryWidget   *textarea.Model
         ptrResultsWidget *results.Model
+        ptrBrowserWidget *browser.Model
     )
 
     for i := range m.Elements {
@@ -190,12 +202,15 @@ func (m Model) View() string {
 
             // Save the pointer
             ptrResultsWidget = element
+
+        case *browser.Model:
+            ptrBrowserWidget = element
         }
     }
 
     return gloss.JoinVertical(0,
         gloss.JoinHorizontal(0,
-            paneDBView.Render(m.DbView.String()),
+            paneDBView.Render(ptrBrowserWidget.View()),
             gloss.JoinVertical(0,
                 ptrQueryWidget.View(),
                 ptrResultsWidget.View(),
@@ -209,56 +224,47 @@ func (m Model) View() string {
 
 }
 
-func (m *Model) RefreshDbView() {
+func (m *Model) RefreshBrowser() tea.Msg {
+
+    data := browser.RefreshData{}
 
     dbs, cur, err := m.DbManager.GetDatabases()
     if err != nil {
-        m.DbView.Root("N/A")
-        return
+        return m.RefreshStatusCenter(fmt.Sprintf("Error: %s", err.Error()))
     }
 
-    m.DbView = tree.Root(styleServer.Render(
-        fmt.Sprintf("  %s (%s)", m.DbManager.DbType(), m.DbManager.DbAddr()))).
-            Enumerator(tree.RoundedEnumerator)
+    data.CurDB = cur
 
     tables, err := m.DbManager.GetTables(); if err != nil {
-        return
+        return m.RefreshStatusCenter(fmt.Sprintf("Error: %s", err.Error()))
     }
 
-    for _, db := range dbs {
-        if db == cur {
+    for _, dbName := range dbs {
+        db := browser.DBData{Name: dbName}
 
-            // Database
-            dbRoot := tree.Root(styleCurDB.Render("* " + db + "  ←"))
-            var tableRoot *tree.Tree
+        for _, tableName := range tables {
 
-            for _, table := range tables {
+            table := browser.TableData{Name: tableName}
 
-                // Table
-                tableRoot = tree.Root(table)
-
-                ts, err := m.DbManager.GetTableStructure(table, db)
-                if err != nil {
-                    log.Printf("Error: %s", err)
-                    return
-                }
-                longestCol := 0
-                for _, col := range ts.Columns {
-                    if len(col.Name) > longestCol {
-                        longestCol = len(col.Name)
-                    }
-                }
-                for _, col := range ts.Columns {
-                    tableRoot.Child(fmt.Sprintf("%-*s (%s)", longestCol + 1, col.Name, col.DataType))
-                }
-                dbRoot.Child(tableRoot)
+            ts, err := m.DbManager.GetTableStructure(tableName, dbName)
+            if err != nil {
+                return m.RefreshStatusCenter(fmt.Sprintf("Error: %s", err.Error()))
             }
-            m.DbView.Child(dbRoot)
-            continue
-        }
 
-        // Database
-        m.DbView = m.DbView.Child(db)
+            for _, col := range ts.Columns {
+                table.Columns = append(table.Columns, browser.ColumnData{
+                    Name: col.Name,
+                    DataType: col.DataType,
+                })
+            }
+            db.Tables = append(db.Tables, table)
+        }
+        data.Databases = append(data.Databases, db)
+    }
+
+    return browser.Msg{
+        Type: browser.RefreshResponse,
+        Data: data,
     }
 }
 
