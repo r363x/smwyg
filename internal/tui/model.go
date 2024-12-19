@@ -2,9 +2,7 @@ package tui
 
 import (
 	"github.com/r363x/dbmanager/pkg/widgets/config"
-	"github.com/r363x/dbmanager/pkg/widgets/button"
 	"github.com/r363x/dbmanager/internal/tui/tab"
-	"github.com/r363x/dbmanager/pkg/widgets/results"
 
 	tea "github.com/charmbracelet/bubbletea"
     "github.com/charmbracelet/bubbles/textarea"

@@ -13,7 +13,6 @@ import (
     tea "github.com/charmbracelet/bubbletea"
     gloss "github.com/charmbracelet/lipgloss"
     "github.com/charmbracelet/bubbles/textarea"
-    "github.com/charmbracelet/lipgloss/tree"
     "github.com/r363x/dbmanager/internal/db"
 
 )
@@ -170,7 +169,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
                 m.DbManager = dbManager
                 err = m.DbManager.Connect()
                 if err == nil {
-                    m.RefreshDbView()
+                    cmds = append(cmds, m.RefreshBrowser)
                 }
             }
 
@@ -200,7 +199,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
         cmds = append(cmds, cmd)
     }
 
-    return m, tea.Batch(cmd...)
+    return m, tea.Batch(cmds...)
 }
 
 func (m Model) View() string {
