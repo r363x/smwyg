@@ -19,11 +19,12 @@ var (
     styleServer = gloss.NewStyle().Bold(true)
     styleCurDB = gloss.NewStyle().Bold(true)
     styleFocused = gloss.NewStyle().Foreground(gloss.Color("#8544b8"))
-    styleBlurred = gloss.NewStyle().Foreground(gloss.Color("#5a3478"))
+    // styleBlurred = gloss.NewStyle().Foreground(gloss.Color("#5a3478"))
+    styleBlurred = gloss.NewStyle()
 )
 
-func selector(_ tree.Children, i int) gloss.Style {
-    if selected == i {
+func itemStyler(_ tree.Children, i int) gloss.Style {
+    if i == 0 {
         return styleFocused
     }
     return styleBlurred
@@ -31,7 +32,7 @@ func selector(_ tree.Children, i int) gloss.Style {
 
 func New() Model {
 
-	t := tree.New().EnumeratorStyleFunc(selector)
+    t := tree.New().ItemStyleFunc(itemStyler)
 
     return Model{
         Tree: t,
@@ -39,7 +40,14 @@ func New() Model {
     }
 }
 
+type NodeType int
 
+const (
+    Server NodeType = iota
+    Database
+    Table
+    Column
+)
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
     var cmd tea.Cmd
@@ -104,9 +112,11 @@ func findLongestCol(table *TableData) int {
 
 func (m *Model) RefreshTree() {
 
-    m.Tree = tree.Root(styleServer.Render(
-        fmt.Sprintf("  %s (%s)", m.Data.ServerType, m.Data.ServerAddr))).
-            Enumerator(tree.DefaultEnumerator)
+	m.Tree = tree.New().
+        ItemStyleFunc(itemStyler).
+        Root(styleServer.Render(
+            fmt.Sprintf("  %s (%s)", m.Data.ServerType, m.Data.ServerAddr))).
+                Enumerator(tree.DefaultEnumerator)
 
     for _, db := range m.Data.Databases {
         if db.Name == m.Data.CurDB {

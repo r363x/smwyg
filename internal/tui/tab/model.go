@@ -208,7 +208,7 @@ func (m Model) View() string {
         paneDBView = gloss.NewStyle().
             Border(gloss.NormalBorder()).
             BorderForeground(gloss.Color("240")).
-            Width(int(float64(m.dimensions.width) * 0.1)).
+            Width(int(float64(m.dimensions.width) * 0.15)).
             Height(m.dimensions.height - 3)
 
         paneStatusView = gloss.NewStyle().
@@ -277,7 +277,10 @@ func (m Model) View() string {
 
 func (m *Model) RefreshBrowser() tea.Msg {
 
-    data := browser.RefreshData{}
+    data := browser.RefreshData{
+        ServerType: m.DbManager.DbType(),
+        ServerAddr: m.DbManager.DbAddr(),
+    }
 
     dbs, cur, err := m.DbManager.GetDatabases()
     if err != nil {
