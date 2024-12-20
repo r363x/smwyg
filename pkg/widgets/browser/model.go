@@ -19,23 +19,13 @@ var (
     styleServer = gloss.NewStyle().Bold(true)
     styleCurDB = gloss.NewStyle().Bold(true)
     styleFocused = gloss.NewStyle().Foreground(gloss.Color("#8544b8"))
-    // styleBlurred = gloss.NewStyle().Foreground(gloss.Color("#5a3478"))
     styleBlurred = gloss.NewStyle()
 )
 
-func itemStyler(_ tree.Children, i int) gloss.Style {
-    if i == 0 {
-        return styleFocused
-    }
-    return styleBlurred
-}
-
 func New() Model {
 
-    t := tree.New().ItemStyleFunc(itemStyler)
-
     return Model{
-        Tree: t,
+        Tree: tree.New(),
         focused: false,
     }
 }
@@ -113,7 +103,6 @@ func findLongestCol(table *TableData) int {
 func (m *Model) RefreshTree() {
 
 	m.Tree = tree.New().
-        ItemStyleFunc(itemStyler).
         Root(styleServer.Render(
             fmt.Sprintf("  %s (%s)", m.Data.ServerType, m.Data.ServerAddr))).
                 Enumerator(tree.DefaultEnumerator)
