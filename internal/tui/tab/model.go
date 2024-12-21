@@ -276,6 +276,9 @@ func (m Model) View() string {
 }
 
 func (m *Model) RefreshBrowser() tea.Msg {
+    if m.DbManager == nil {
+        return nil
+    }
 
     data := browser.RefreshData{
         ServerType: m.DbManager.DbType(),

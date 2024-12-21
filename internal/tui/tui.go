@@ -58,8 +58,13 @@ func New(DbManager db.Manager) (*tea.Program, error) {
 
     resultsWidget.Table.SetStyles(s)
 
-    // Connect to the database TODO: handle err
-    tab.DbManager.Connect()
+    // Connect to the database
+    if tab.DbManager != nil {
+        err := tab.DbManager.Connect()
+        if err == nil {
+            tab.RefreshBrowser()
+        }
+    }
 
 	queryWidget.Placeholder = "Enter your SQL query here"
     queryWidget.Focus()
