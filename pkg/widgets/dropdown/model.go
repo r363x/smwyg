@@ -1,6 +1,8 @@
 package dropdown
 
 import (
+	"github.com/r363x/dbmanager/pkg/widgets/overlay"
+
     tea "github.com/charmbracelet/bubbletea"
 	gloss "github.com/charmbracelet/lipgloss"
 )
@@ -38,7 +40,7 @@ func Open() tea.Msg {
     return Msg{Type: Opened}
 }
 
-func close() tea.Msg {
+func Close() tea.Msg {
     return Msg{Type: Closed}
 }
 
@@ -56,17 +58,36 @@ func DeliverData(data map[string]string) tea.Cmd {
 }
 
 type Item struct {
-    Label    string
-    Defaults map[string]string
+    Label           string
+    Defaults        map[string]string
     style           gloss.Style
-    stylePressed    gloss.Style
-    styleFocused    gloss.Style
-    styleBlurred    gloss.Style
+}
+
+func (m *Item) Focus() tea.Cmd {
+    m.style = styleFocused
+    return nil
+}
+
+func (m *Item) Blur() {
+    m.style = styleBlurred
 }
 
 type Model struct {
+    overlay.ModelBase
     Items []Item
     cur   int
+    open  bool // Track if the dropdown is open or closed
+}
+
+func (m *Model) Selection() Item {
+    return m.Items[m.cur]
+}
+
+func (m *Model) Focus() tea.Cmd {
+    return nil
+}
+
+func (m *Model) Blur() {
 }
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
@@ -78,20 +99,54 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
         switch msg.Type {
         case tea.KeyDown:
-            //TODO
+            if m.cur < len(m.Items) - 1 {
+                m.Items[m.cur].Blur()
+                m.cur++
+                cmd = m.Items[m.cur].Focus()
+            }
+
+        case tea.KeyTab:
+            m.Items[m.cur].Blur()
+
+            switch n := len(m.Items) - 1; {
+            case m.cur < n:
+                m.cur++
+            case m.cur == n:
+                m.cur = 0
+            }
+            cmd = m.Items[m.cur].Focus()
+
         case tea.KeyUp:
-            //TODO
+            if m.cur >= 1 {
+                m.Items[m.cur].Blur()
+                m.cur--
+                cmd = m.Items[m.cur].Focus()
+            }
+
+        case tea.KeyShiftTab:
+            m.Items[m.cur].Blur()
+
+            switch n := len(m.Items) - 1; {
+            case m.cur >= 1:
+                m.cur--
+            case m.cur == 0:
+                m.cur = n
+            }
+            cmd = m.Items[m.cur].Focus()
+
         case tea.KeyEnter:
-            
+            cmd = Select
         }
 
     case Msg:
-
         switch msg.Type {
         case Opened:
-            //TODO
+            m.open = true
+            cmd = m.Items[0].Focus()
+
         case Closed:
-            //TODO
+            m.open = false
+
         case Selected:
             cmd = DeliverData(msg.Data)
         }
@@ -102,22 +157,25 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 }
 
 func (m Model) View() string {
-    //TODO
-}
+    if m.open {
+        var items []string
 
-func (m *Item) Focus() tea.Cmd {
-    m.style = m.styleFocused
-    return nil
+        for _, item := range m.Items {
+            items = append(items, item.style.Render(item.Label))
+        }
 
-}
-
-func (m *Item) Blur() {
-    m.style = m.styleBlurred
+        return gloss.JoinVertical(0, items...)
+    } else {
+        item := m.Selection()
+        return item.style.Render(item.Label)
+    }
 }
 
 func New(items []Item) *Model {
 
-    m := Model{cur: 0}
+    base := overlay.NewBase()
+
+    m := Model{ModelBase: base, cur: 0}
 
     empty := NewItem("---", map[string]string{})
 
@@ -137,9 +195,6 @@ func NewItem(label string, defaults map[string]string) Item {
         Label: label,
         Defaults: defaults,
         style: style,
-        stylePressed: stylePressed,
-        styleFocused: styleFocused,
-        styleBlurred: styleBlurred,
     }
 }
 

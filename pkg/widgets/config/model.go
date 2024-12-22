@@ -6,6 +6,7 @@ import (
 	"github.com/r363x/dbmanager/pkg/widgets/overlay"
 	"github.com/r363x/dbmanager/pkg/widgets/button"
 	"github.com/r363x/dbmanager/pkg/widgets/input"
+	"github.com/r363x/dbmanager/pkg/widgets/dropdown"
 
 	tea "github.com/charmbracelet/bubbletea"
     gloss "github.com/charmbracelet/lipgloss"
@@ -132,6 +133,12 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
         view.Elements[view.cur] = &btn
         cmds = append(cmds, cmd)
 
+    case dropdown.Msg:
+        dd := *view.Elements[view.cur].(*dropdown.Model)
+        dd, cmd = dd.Update(msg)
+        view.Elements[view.cur] = &dd
+        cmds = append(cmds, cmd)
+
     case Msg:
         switch msg.Type {
         case Close:
@@ -173,6 +180,8 @@ func (m *Model) updateElements(msg tea.Msg) tea.Cmd {
             *element, cmd[i] = element.Update(msg)
         case *button.Model:
             *element, cmd[i] = element.Update(msg)
+        case *dropdown.Model:
+            *element, cmd[i] = element.Update(msg)
         }
     }
 
@@ -195,6 +204,11 @@ func (m Model) View() string {
     for _, element := range m.views[m.cur].Elements {
 
         switch element := element.(type) {
+        case *dropdown.Model:
+            inputs = append(inputs, gloss.JoinHorizontal(0,
+                fmt.Sprintf("\n%-10s", element.Selection().Label + ": "),
+                inputBorder.Render(element.View(),
+            )))
         case *input.Model:
             inputs = append(inputs, gloss.JoinHorizontal(0,
                 fmt.Sprintf("\n%-10s", element.Label + ": "),

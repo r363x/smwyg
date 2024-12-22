@@ -4,8 +4,20 @@ import (
     "github.com/r363x/dbmanager/pkg/widgets/config"
     "github.com/r363x/dbmanager/pkg/widgets/button"
     "github.com/r363x/dbmanager/pkg/widgets/input"
+    "github.com/r363x/dbmanager/pkg/widgets/dropdown"
 
     tea "github.com/charmbracelet/bubbletea"
+)
+
+var (
+    defaultsMysql = map[string]string{
+        "host": "localhost",
+        "port": "3306",
+    }
+    defaultsPostgres = map[string]string{
+        "host": "localhost",
+        "port": "5432",
+    }
 )
 
 func createConfigView() config.Model {
@@ -16,7 +28,15 @@ func createConfigView() config.Model {
         btnLabels = []string{"Connect", "Close"}
     )
 
-    elements := make([]config.Element, len(inLabels))
+    elements := make([]config.Element, 1)
+    items := make([]dropdown.Item, 2)
+
+    items = append(items, dropdown.NewItem("mysql", defaultsMysql))
+    items = append(items, dropdown.NewItem("postgres", defaultsPostgres))
+
+    dbTypes := dropdown.New(items)
+
+    elements[0] = dbTypes
 
     for i, label := range inLabels {
 
@@ -28,7 +48,7 @@ func createConfigView() config.Model {
             element.Blur()
         }
 
-        elements[i] = &element
+        elements = append(elements, &element)
     }
 
     for _, label := range btnLabels {
