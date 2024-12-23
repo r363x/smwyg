@@ -77,16 +77,32 @@ func NewBase() ModelBase {
     return m
 }
 
+func (m *ModelBase) SetStyle(style gloss.Style) {
+    m.style = style
+}
+
+func (m *ModelBase) GetStyle() gloss.Style {
+    return m.style
+}
+
 // Sets the width of the overlay
 func (m *ModelBase) SetWidth(width int) {
     m.width = width
     m.style = m.style.Width(m.width)
 }
 
+func (m *ModelBase) GetWidth() int {
+    return m.width
+}
+
 // Sets the height of the overlay
 func (m *ModelBase) SetHeight(height int) {
     m.height = height
     m.style = m.style.Height(m.height)
+}
+
+func (m *ModelBase) GetHeight() int {
+    return m.height
 }
 
 func (m *ModelBase) Activate() {

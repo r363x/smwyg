@@ -23,12 +23,9 @@ var (
         PaddingRight(2).
         MarginLeft(1).
         MarginRight(1)
-
-    stylePressed = style.Background(gloss.Color("#c3ccdb"))
-
     styleFocused = style.Background(gloss.Color("#8544b8"))
-
-    styleBlurred = style.Background(gloss.Color("#5a3478"))
+    styleBlurred = style.Background(gloss.Color("#7e7880"))
+    styleFrame   = gloss.NewStyle().Background(gloss.Color("#7e7880"))
 )
 
 type Msg struct {
@@ -160,6 +157,7 @@ func (m Model) View() string {
         var items []string
 
         for _, item := range m.Items {
+            item.style = item.style.Width(m.GetWidth()-1)
             items = append(items, item.style.Render(item.Label))
         }
 
@@ -173,6 +171,7 @@ func (m Model) View() string {
 func New(items []Item) *Model {
 
     base := overlay.NewBase()
+    base.SetStyle(styleFrame)
 
     m := Model{ModelBase: base, cur: 0}
 
@@ -183,6 +182,8 @@ func New(items []Item) *Model {
     for i := range items {
         m.Items = append(m.Items, items[i])
     }
+
+    m.Items[0].Focus()
 
     return &m
 }
