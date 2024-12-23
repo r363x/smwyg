@@ -32,6 +32,9 @@ type ModelBase struct {
     // Whether the overlay should be shown or not
     Show        bool
 
+    // Whether or not the overlay is the active one
+    active      bool
+
     // The current styling to use
     style       gloss.Style
 
@@ -84,6 +87,18 @@ func (m *ModelBase) SetWidth(width int) {
 func (m *ModelBase) SetHeight(height int) {
     m.height = height
     m.style = m.style.Height(m.height)
+}
+
+func (m *ModelBase) Activate() {
+    m.active = true
+}
+
+func (m *ModelBase) Deactivate() {
+    m.active = false
+}
+
+func (m *ModelBase) Active() bool {
+    return m.active
 }
 
 // Sets the contents of the overlay background

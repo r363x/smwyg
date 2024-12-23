@@ -75,8 +75,8 @@ func (m *Item) Blur() {
 type Model struct {
     overlay.ModelBase
     Items []Item
+    Label string
     cur   int
-    open  bool // Track if the dropdown is open or closed
 }
 
 func (m *Model) Selection() Item {
@@ -135,20 +135,19 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
             cmd = m.Items[m.cur].Focus()
 
         case tea.KeyEnter:
-            cmd = Select
+            cmd = DeliverData(m.Selection().Defaults)
+            m.Show = false
         }
 
     case Msg:
         switch msg.Type {
         case Opened:
-            m.open = true
+            m.Show = true
             cmd = m.Items[0].Focus()
 
         case Closed:
-            m.open = false
+            m.Show = false
 
-        case Selected:
-            cmd = DeliverData(msg.Data)
         }
 
     }
@@ -157,7 +156,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 }
 
 func (m Model) View() string {
-    if m.open {
+    if m.Show {
         var items []string
 
         for _, item := range m.Items {
@@ -177,7 +176,7 @@ func New(items []Item) *Model {
 
     m := Model{ModelBase: base, cur: 0}
 
-    empty := NewItem("---", map[string]string{})
+    empty := NewItem("---", nil)
 
     m.Items = append(m.Items, empty)
 

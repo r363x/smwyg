@@ -3,6 +3,7 @@ package config
 import (
     "fmt"
     "log"
+    "strings"
 	"github.com/r363x/dbmanager/pkg/widgets/overlay"
 	"github.com/r363x/dbmanager/pkg/widgets/button"
 	"github.com/r363x/dbmanager/pkg/widgets/input"
@@ -76,55 +77,84 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
     switch msg := msg.(type) {
 	case tea.KeyMsg:
 
-		switch msg.Type {
-        case tea.KeyDown:
-            if view.cur < len(view.Elements) - 1 {
+        if m.Active() {
+
+            switch msg.Type {
+            case tea.KeyDown:
+                if view.cur < len(view.Elements) - 1 {
+                    view.Elements[view.cur].Blur()
+                    view.cur++
+                    cmd = view.Elements[view.cur].Focus()
+                    cmds = append(cmds, cmd)
+                }
+
+            case tea.KeyTab:
+
                 view.Elements[view.cur].Blur()
-                view.cur++
+
+                switch n := len(view.Elements) - 1; {
+                case view.cur < n:
+                    view.cur++
+                case view.cur == n:
+                    view.cur = 0
+                }
+
                 cmd = view.Elements[view.cur].Focus()
+                cmds = append(cmds, cmd)
+
+
+            case tea.KeyUp:
+                if view.cur >= 1 {
+                    view.Elements[view.cur].Blur()
+                    view.cur--
+                    cmd = view.Elements[view.cur].Focus()
+                    cmds = append(cmds, cmd)
+                }
+
+            case tea.KeyShiftTab:
+
+                view.Elements[view.cur].Blur()
+
+                switch n := len(view.Elements) - 1; {
+                case view.cur >= 1:
+                    view.cur--
+                case view.cur == 0:
+                    view.cur = n
+                }
+
+                cmd = view.Elements[view.cur].Focus()
+                cmds = append(cmds, cmd)
+
+
+            case tea.KeyEnter:
+                switch element := view.Elements[view.cur].(type) {
+                case *dropdown.Model:
+                    if element.Show {
+                        *element, cmd = element.Update(msg)
+                    } else {
+                        m.BlurAll()
+                        m.Deactivate()
+                        element.Show = true
+                    }
+
+                case *button.Model:
+                    *element, cmd = element.Update(msg)
+                }
+
+                cmds = append(cmds, cmd)
+
+            default:
+                cmd = m.updateElements(msg)
                 cmds = append(cmds, cmd)
             }
 
-        case tea.KeyTab:
+        } else {
 
-            view.Elements[view.cur].Blur()
-
-            switch n := len(view.Elements) - 1; {
-            case view.cur < n:
-                view.cur++
-            case view.cur == n:
-                view.cur = 0
-            }
-
-            cmd = view.Elements[view.cur].Focus()
-            cmds = append(cmds, cmd)
-
-
-        case tea.KeyUp:
-            if view.cur >= 1 {
-                view.Elements[view.cur].Blur()
-                view.cur--
-                cmd = view.Elements[view.cur].Focus()
+            switch element := view.Elements[view.cur].(type) {
+            case *dropdown.Model:
+                *element, cmd = element.Update(msg)
                 cmds = append(cmds, cmd)
             }
-
-        case tea.KeyShiftTab:
-
-            view.Elements[view.cur].Blur()
-
-            switch n := len(view.Elements) - 1; {
-            case view.cur >= 1:
-                view.cur--
-            case view.cur == 0:
-                view.cur = n
-            }
-
-            cmd = view.Elements[view.cur].Focus()
-            cmds = append(cmds, cmd)
-
-        default:
-            cmd = m.updateElements(msg)
-            cmds = append(cmds, cmd)
         }
 
     case button.Msg:
@@ -134,10 +164,17 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
         cmds = append(cmds, cmd)
 
     case dropdown.Msg:
-        dd := *view.Elements[view.cur].(*dropdown.Model)
-        dd, cmd = dd.Update(msg)
-        view.Elements[view.cur] = &dd
-        cmds = append(cmds, cmd)
+        switch msg.Type {
+        case dropdown.SelectionData:
+            m.setPlaceholders(msg.Data)
+            m.Activate()
+
+        default:
+            dd := *view.Elements[view.cur].(*dropdown.Model)
+            dd, cmd = dd.Update(msg)
+            view.Elements[view.cur] = &dd
+            cmds = append(cmds, cmd)
+        }
 
     case Msg:
         switch msg.Type {
@@ -167,6 +204,45 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
     return m, tea.Batch(cmds...)
 }
 
+func (m *Model) BlurAll() {
+    for _, element := range m.views[m.cur].Elements {
+        element.Blur()
+    }
+}
+
+func (m *Model) setPlaceholders(data map[string]string) {
+
+    if data == nil {
+        m.clearPlaceholders()
+        return
+    }
+
+    elements := m.views[m.cur].Elements
+
+    for i := range elements {
+
+        switch element := elements[i].(type) {
+        case *input.Model:
+
+            for label, placeholder := range data {
+                if strings.ToLower(element.Label) == strings.ToLower(label) {
+                    element.Placeholder = placeholder
+                }
+            }
+        }
+    }
+}
+
+func (m *Model) clearPlaceholders() {
+    elements := m.views[m.cur].Elements
+    for i := range elements {
+        switch element := elements[i].(type) {
+        case *input.Model:
+            element.Placeholder = ""
+        }
+    }
+}
+
 func (m *Model) updateElements(msg tea.Msg) tea.Cmd {
 
     elements := m.views[m.cur].Elements
@@ -188,6 +264,15 @@ func (m *Model) updateElements(msg tea.Msg) tea.Cmd {
     return tea.Batch(cmd...)
 }
 
+func (m *Model) SetDimensions(width, height int) {
+    m.ModelBase.SetDimensions(width, height)
+    for _, element := range m.views[m.cur].Elements {
+        if element, ok := element.(*dropdown.Model); ok {
+            element.SetDimensions(width, height)
+        }
+    }
+}
+
 func (m Model) View() string {
 
     var (
@@ -197,18 +282,23 @@ func (m Model) View() string {
         inputsBox   = box.Align(gloss.Left).PaddingLeft(4).MarginBottom(3)
         buttonsBox  = box
 
-        inputs  []string
-        buttons []string
+        inputs      []string
+        buttons     []string
+        ptrDropdown *dropdown.Model
     )
 
     for _, element := range m.views[m.cur].Elements {
 
         switch element := element.(type) {
         case *dropdown.Model:
+            ptrDropdown = element
+            state := ptrDropdown.Show
+            ptrDropdown.Show = false
             inputs = append(inputs, gloss.JoinHorizontal(0,
-                fmt.Sprintf("\n%-10s", element.Selection().Label + ": "),
+                fmt.Sprintf("\n%-10s", element.Label + ": "),
                 inputBorder.Render(element.View(),
             )))
+            ptrDropdown.Show = state
         case *input.Model:
             inputs = append(inputs, gloss.JoinHorizontal(0,
                 fmt.Sprintf("\n%-10s", element.Label + ": "),
@@ -226,6 +316,13 @@ func (m Model) View() string {
         buttonsBox.Render(gloss.JoinHorizontal(0, buttons...)),
     )
 
-    return m.ModelBase.View(content)
+    final := m.ModelBase.View(content)
+
+    if ptrDropdown.Show {
+        ptrDropdown.SetBackground(final)
+        final = ptrDropdown.ModelBase.View(ptrDropdown.View())
+    }
+
+    return final
 }
 

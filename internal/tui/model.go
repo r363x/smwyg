@@ -43,6 +43,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
         case tea.KeyCtrlO:
             m.overlay.Show = !m.overlay.Show
+            m.overlay.Activate()
 
         default:
             if m.overlay.Show {

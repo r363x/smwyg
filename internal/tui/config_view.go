@@ -23,20 +23,23 @@ var (
 func createConfigView() config.Model {
 
     var (
-        views = []config.View{{Name: "Connect"}}
-        inLabels = []string{"Type", "Host", "Port", "User", "Password", "DB Name"}
+        views     = []config.View{{Name: "Connect"}}
+        inLabels  = []string{"Host", "Port", "User", "Password", "DB Name"}
         btnLabels = []string{"Connect", "Close"}
+        elements    []config.Element
+        items       []dropdown.Item
     )
 
-    elements := make([]config.Element, 1)
-    items := make([]dropdown.Item, 2)
 
     items = append(items, dropdown.NewItem("mysql", defaultsMysql))
     items = append(items, dropdown.NewItem("postgres", defaultsPostgres))
 
     dbTypes := dropdown.New(items)
+    dbTypes.Label = "Type"
+    dbTypes.SetWidth(20)
+    dbTypes.SetHeight(8)
 
-    elements[0] = dbTypes
+    elements = append(elements, dbTypes)
 
     for i, label := range inLabels {
 
