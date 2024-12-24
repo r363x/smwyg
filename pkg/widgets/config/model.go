@@ -189,13 +189,20 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
             for _, element := range m.views[m.cur].Elements {
 
                 switch element := element.(type) {
+                case *dropdown.Model:
+                    data[element.Label] = element.Selection().Label
                 case *input.Model:
-                    data[element.Label] = element.Value()
+                    value := element.Value()
+                    if value == "" {
+                        value = element.Placeholder
+                    }
+                    data[element.Label] = value
                 }
             }
 
             // Deliver the map with form data
             cmds = append(cmds, DeliverFormData(data))
+            log.Printf("%#v", data)
             m.Close()
         }
     }
