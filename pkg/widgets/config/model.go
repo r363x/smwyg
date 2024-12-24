@@ -298,14 +298,21 @@ func (m Model) View() string {
 
         switch element := element.(type) {
         case *dropdown.Model:
+            // Save the state
             ptrDropdown = element
             state := ptrDropdown.Show
+
+            // Hide when drawing the background
             ptrDropdown.Show = false
+
             inputs = append(inputs, gloss.JoinHorizontal(0,
                 fmt.Sprintf("\n%-10s", element.Label + ": "),
                 inputBorder.Render(element.View(),
             )))
+
+            // Restore the state
             ptrDropdown.Show = state
+
         case *input.Model:
             inputs = append(inputs, gloss.JoinHorizontal(0,
                 fmt.Sprintf("\n%-10s", element.Label + ": "),

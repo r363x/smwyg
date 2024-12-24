@@ -34,7 +34,7 @@ func createConfigView() config.Model {
     items = append(items, dropdown.NewItem("mysql", defaultsMysql))
     items = append(items, dropdown.NewItem("postgres", defaultsPostgres))
 
-    dbTypes := dropdown.New(items)
+    dbTypes := dropdown.New(items, "Available drivers")
     dbTypes.Label = "Type"
     dbTypes.SetWidth(20)
     dbTypes.SetHeight(8)
